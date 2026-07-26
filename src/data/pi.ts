@@ -12,6 +12,38 @@ export const pi: AgentDef = {
     zh: 'Mario Zechner 打造的极简终端编程代理：无内置系统提示套路、支持会话树与多模型切换，一切皆可扩展。',
   },
   coverage: 'core',
+  session: {
+    prompt: '>',
+    banner: [
+      { text: 'pi v0.82.1', style: 'accent', note: { zh: 'pi 的横幅就这么朴素——极简是它的设计哲学' } },
+      { text: '{model} · thinking: {thinking}', style: 'dim', note: { zh: '当前模型与思考深度（状态栏同步显示）' } },
+      { text: '~/my-project · session: {session}', style: 'dim', note: { zh: '会话默认存为 JSONL 文件，可随意拷贝迁移' } },
+    ],
+    statusFields: [
+      {
+        key: 'model',
+        label: { zh: '模型' },
+        initial: 'claude-sonnet-4-5',
+        options: ['claude-sonnet-4-5', 'gpt-5.1', 'gemini-3-pro', 'qwen3-coder'],
+      },
+      {
+        key: 'thinking',
+        label: { zh: '思考深度' },
+        initial: 'medium',
+        options: ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
+      },
+      { key: 'context', label: { zh: '上下文' }, initial: '1%' },
+      { key: 'session', label: { zh: '会话' }, initial: '(未命名)' },
+    ],
+    chatReply: [
+      { text: '⠿ working…', style: 'dim' },
+      {
+        text: 'Let me read the relevant files and make that change.',
+        note: { zh: '真实的 pi 会用 read/edit/bash 等工具直接干活；途中你随时回车就能插话转向' },
+      },
+    ],
+    exitInputs: ['exit', '/exit', '/quit'],
+  },
   categories: [
     {
       id: 'cli-flags',
@@ -30,6 +62,17 @@ export const pi: AgentDef = {
               detail: '适合脚本和管道场景。配合 --mode json 可以拿到结构化的事件流输出。',
             },
           },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '(model response printed to stdout)', style: 'dim', note: { zh: '结果直接打印到标准输出，随后退出——适合脚本和管道' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'flag',
@@ -43,19 +86,34 @@ export const pi: AgentDef = {
               detail: 'json 模式把每个事件按行输出 JSON，适合日志和程序解析；rpc 模式通过 stdin/stdout 走 JSON 协议双向通信，可以把 pi 当后端嵌进自己的应用。',
             },
           },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '{"type":"session_start","sessionId":"0199a1b2-4c3d"}', style: 'dim', note: { zh: '每个事件一行 JSON，程序可以逐行解析' } },
+                  { text: '{"type":"message_start","role":"assistant"}', style: 'dim' },
+                  { text: '{"type":"text_delta","text":"Hello!"}', style: 'dim', note: { zh: '模型输出以增量事件流出' } },
+                  { text: '{"type":"message_end","usage":{"input":1204,"output":56}}', style: 'dim', note: { zh: '结束事件附带 token 用量；rpc 模式则在 stdin/stdout 上双向收发这类 JSON' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'flag',
           name: '--model',
           argSpec: '<pattern>',
           example: 'pi --model sonnet',
-          en: 'Model pattern or ID, with optional :thinking level suffix',
+          en: 'Model pattern or ID; supports provider/id and an optional :thinking suffix',
           i18n: {
             zh: {
               summary: '指定模型（支持模式匹配）',
-              detail: '可以写模型 ID 或模糊匹配的模式，还能加 :thinking 后缀直接指定思考深度，如 --model "gpt-5:high"。',
+              detail: '可以写模型 ID、provider/id 或模糊匹配的模式，还能加 :thinking 后缀直接指定思考深度，如 --model "gpt-5:high"。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { model: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -72,6 +130,14 @@ export const pi: AgentDef = {
         },
         {
           kind: 'flag',
+          name: '--api-key',
+          argSpec: '<key>',
+          example: 'pi --provider openai --api-key sk-...',
+          en: 'API key for the provider, overriding environment variables',
+          i18n: { zh: { summary: '直接传入 API key（覆盖环境变量）' } },
+        },
+        {
+          kind: 'flag',
           name: '--thinking',
           argSpec: '<level>',
           example: 'pi --thinking high',
@@ -79,9 +145,10 @@ export const pi: AgentDef = {
           i18n: {
             zh: {
               summary: '设置模型的思考（推理）深度',
-              detail: '从 off 到 max 共七档。会话中也可以在 /settings 里调整。',
+              detail: '从 off 到 max 共七档。会话中可在 /settings 里调整，或按 Shift+Tab 循环切换。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { thinking: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -103,6 +170,21 @@ export const pi: AgentDef = {
           example: 'pi --list-models claude',
           en: 'List available models, optionally filtered by a search term',
           i18n: { zh: { summary: '列出可用模型（可带关键词过滤）' } },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'anthropic/claude-sonnet-4-5', note: { zh: '格式是 provider/model-id' } },
+                  { text: 'anthropic/claude-opus-4-5', style: 'dim' },
+                  { text: 'openai/gpt-5.1', style: 'dim' },
+                  { text: 'google/gemini-3-pro', style: 'dim' },
+                  { text: 'llamacpp/qwen3-coder', style: 'dim', note: { zh: '本地 llama.cpp 模型也在同一目录里' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'flag',
@@ -111,6 +193,15 @@ export const pi: AgentDef = {
           example: 'pi -c',
           en: 'Resume the most recent session',
           i18n: { zh: { summary: '接着最近一次会话继续' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [{ text: 'Resuming session 0199a1b2 (24 messages)…', style: 'dim', note: { zh: '恢复最近一次会话（仿真）' } }],
+              },
+              { type: 'state', patch: { context: '38%' } },
+            ],
+          },
         },
         {
           kind: 'flag',
@@ -125,11 +216,11 @@ export const pi: AgentDef = {
           name: '--session',
           argSpec: '<path|id>',
           example: 'pi --session ./mysession.jsonl',
-          en: 'Use a specific session file or UUID',
+          en: 'Use a specific session file or partial UUID',
           i18n: {
             zh: {
               summary: '指定要使用的会话文件或 ID',
-              detail: '会话是纯 JSONL 文件，可以随意拷贝、进版本库、跨机器迁移。',
+              detail: '会话是纯 JSONL 文件，可以随意拷贝、进版本库、跨机器迁移。ID 支持只写前几位。',
             },
           },
         },
@@ -140,6 +231,16 @@ export const pi: AgentDef = {
           example: 'pi --fork ./mysession.jsonl',
           en: 'Create a new session forked from an existing one',
           i18n: { zh: { summary: '从已有会话分叉出一个新会话' } },
+        },
+        {
+          kind: 'flag',
+          name: '--name',
+          aliases: ['-n'],
+          argSpec: '<name>',
+          example: 'pi -n "重构认证模块"',
+          en: 'Set the session display name at startup',
+          i18n: { zh: { summary: '启动时就给会话起好名字', detail: '会话中也可以用 /name 改名。' } },
+          simulate: { effects: [{ type: 'state', patch: { session: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -158,7 +259,7 @@ export const pi: AgentDef = {
           i18n: {
             zh: {
               summary: '只启用指定的工具',
-              detail: '相关选项：--exclude-tools 排除某些工具、--no-builtin-tools 只关内置工具、--no-tools 关掉全部工具（纯聊天）。',
+              detail: '内置工具有 read、bash、edit、write、grep、find、ls。相关选项：--exclude-tools（-xt）排除某些工具、--no-builtin-tools（-nbt）只关内置工具、--no-tools（-nt）关掉全部工具（纯聊天）。',
             },
           },
         },
@@ -182,7 +283,7 @@ export const pi: AgentDef = {
           argSpec: '<path>',
           example: 'pi --skill ./skills/review',
           en: 'Load a skill from a path (repeatable)',
-          i18n: { zh: { summary: '加载指定技能（skill），可重复传入' } },
+          i18n: { zh: { summary: '加载指定技能（skill），可重复传入', detail: '--no-skills 则禁用技能自动发现。类似的还有 --prompt-template / --theme 及对应的 --no-* 开关。' } },
         },
         {
           kind: 'flag',
@@ -207,11 +308,40 @@ export const pi: AgentDef = {
         },
         {
           kind: 'flag',
+          name: '--approve',
+          aliases: ['-a'],
+          example: 'pi -a',
+          en: 'Trust project-local files for this run (-na to ignore them instead)',
+          i18n: {
+            zh: {
+              summary: '本次运行临时信任项目本地配置',
+              detail: 'pi 默认不自动加载项目目录里的扩展/技能，需要确认。-a 临时信任、-na（--no-approve）临时忽略，/trust 则永久信任。',
+            },
+          },
+        },
+        {
+          kind: 'flag',
           name: '--export',
           argSpec: '<in> [out]',
           example: 'pi --export ./mysession.jsonl session.html',
           en: 'Export a session file to a self-contained HTML page',
           i18n: { zh: { summary: '把会话文件导出为独立 HTML 页面' } },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [{ text: '✓ Exported mysession.jsonl → session.html', style: 'ok', note: { zh: '生成单文件 HTML，双击就能回看整个会话' } }],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'flag',
+          name: '--verbose',
+          example: 'pi --verbose',
+          en: 'Force verbose startup logging',
+          i18n: { zh: { summary: '启动时输出详细日志（排查扩展/配置加载问题）' } },
         },
         {
           kind: 'flag',
@@ -220,6 +350,10 @@ export const pi: AgentDef = {
           example: 'pi --version',
           en: 'Show the version number',
           i18n: { zh: { summary: '查看版本号' } },
+          simulate: {
+            preventSession: true,
+            effects: [{ type: 'print', lines: [{ text: '0.82.1', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+          },
         },
         {
           kind: 'flag',
@@ -240,12 +374,24 @@ export const pi: AgentDef = {
           name: 'install',
           argSpec: '<source>',
           example: 'pi install git:github.com/badlogic/pi-doom',
-          en: 'Install a pi package from npm or git (add -l for project-local)',
+          en: 'Install a pi package (extensions, skills, prompts, themes) from npm or git; add -l for project-local',
           i18n: {
             zh: {
               summary: '安装 pi 扩展包（npm 或 git 来源）',
               detail: '如 pi install npm:@foo/pi-tools。加 -l 只装到当前项目而不是全局。',
             },
+          },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Installing git:github.com/badlogic/pi-doom…', style: 'dim' },
+                  { text: '✓ Installed pi-doom (1 extension)', style: 'ok', note: { zh: '装完即用，扩展/技能/主题都能这样分发' } },
+                ],
+              },
+            ],
           },
         },
         {
@@ -269,6 +415,18 @@ export const pi: AgentDef = {
               detail: '--all 全部更新；--self 只更新 pi；--extensions 只更新扩展包；--models 刷新模型目录。',
             },
           },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'pi 0.82.1 → up to date', style: 'ok' },
+                  { text: '✓ Updated 2 packages', style: 'ok', note: { zh: '本体与扩展包一条命令全部更新' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'subcommand',
@@ -276,6 +434,20 @@ export const pi: AgentDef = {
           example: 'pi list',
           en: 'List installed packages',
           i18n: { zh: { summary: '列出已安装的扩展包' } },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'global:', style: 'accent' },
+                  { text: '  npm:@foo/pi-tools    2 tools, 1 command', style: 'dim' },
+                  { text: 'project:', style: 'accent', note: { zh: '全局与项目级安装分开列出' } },
+                  { text: '  git:github.com/badlogic/pi-doom    1 extension', style: 'dim' },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'subcommand',
@@ -298,8 +470,29 @@ export const pi: AgentDef = {
           i18n: {
             zh: {
               summary: '会话中切换模型',
-              detail: '换模型不丢上下文，可以随时在不同提供商的模型之间横跳。Ctrl+P 则在常用模型间快速轮换。',
+              detail: '换模型不丢上下文，可以随时在不同提供商的模型之间横跳。Ctrl+L 打开选择器，Ctrl+P 在常用模型间快速轮换。',
             },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择模型（点击切换，状态栏会跟着变）' },
+                  stateKey: 'model',
+                  items: [
+                    { value: 'claude-sonnet-4-5', label: 'anthropic/claude-sonnet-4-5', note: { zh: '换模型不丢上下文' } },
+                    { value: 'gpt-5.1', label: 'openai/gpt-5.1', note: { zh: '跨提供商随意横跳' } },
+                    { value: 'gemini-3-pro', label: 'google/gemini-3-pro' },
+                    { value: 'qwen3-coder', label: 'llamacpp/qwen3-coder', note: { zh: '本地 llama.cpp 模型（配合 /llama 管理）' } },
+                  ],
+                },
+              },
+            ],
+            argEffects: [
+              { type: 'state', patch: { model: '{arg}' } },
+              { type: 'print', lines: [{ text: '✓ Switched to {model}', style: 'ok', note: { zh: '已切换模型，注意状态栏' } }] },
+            ],
           },
         },
         {
@@ -307,7 +500,25 @@ export const pi: AgentDef = {
           name: '/settings',
           example: '/settings',
           en: 'Adjust thinking level, theme, message delivery and transport',
-          i18n: { zh: { summary: '打开设置（思考深度、主题等）' } },
+          i18n: { zh: { summary: '打开设置（思考深度、主题等）', detail: '思考深度也可以直接按 Shift+Tab 循环切换。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '设置（仿真只演示思考深度一项，点击调整）' },
+                  stateKey: 'thinking',
+                  items: [
+                    { value: 'off', label: 'thinking: off', note: { zh: '不思考，响应最快' } },
+                    { value: 'low', label: 'thinking: low' },
+                    { value: 'medium', label: 'thinking: medium', note: { zh: '默认档位' } },
+                    { value: 'high', label: 'thinking: high' },
+                    { value: 'max', label: 'thinking: max', note: { zh: '最深推理，最费 token' } },
+                  ],
+                },
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -318,10 +529,24 @@ export const pi: AgentDef = {
         },
         {
           kind: 'slash',
+          name: '/llama',
+          example: '/llama',
+          en: 'Download, load and unload local llama.cpp router models',
+          i18n: { zh: { summary: '管理本地 llama.cpp 模型（下载/加载/卸载）', detail: '让 pi 直接驱动本地开源模型，无需任何云端 API。' } },
+        },
+        {
+          kind: 'slash',
           name: '/new',
           example: '/new',
           en: 'Start a new session',
           i18n: { zh: { summary: '开启一个新会话' } },
+          simulate: {
+            effects: [
+              { type: 'clear' },
+              { type: 'state', patch: { context: '0%', session: '(未命名)' } },
+              { type: 'print', lines: [{ text: 'Started a new session.', style: 'dim', note: { zh: '屏幕已清空，上下文归零（看状态栏）' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -336,6 +561,18 @@ export const pi: AgentDef = {
           example: '/session',
           en: 'Show session file, ID, message count, tokens and cost',
           i18n: { zh: { summary: '查看当前会话信息（文件、token、费用）' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'file:     ~/.pi/sessions/0199a1b2-4c3d.jsonl', style: 'dim', note: { zh: '会话就是一个 JSONL 文件' } },
+                  { text: 'name:     {session}', style: 'dim' },
+                  { text: 'messages: 24 · tokens: 48.2k · cost: $0.31', note: { zh: '消息数、token 用量与费用一目了然' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -344,6 +581,13 @@ export const pi: AgentDef = {
           example: '/name 重构认证模块',
           en: 'Set a display name for the current session',
           i18n: { zh: { summary: '给当前会话起个名字' } },
+          simulate: {
+            effects: [{ type: 'print', lines: [{ text: 'Usage: /name <name>', style: 'dim', note: { zh: '带上名字再试试，如 /name 重构认证模块' } }] }],
+            argEffects: [
+              { type: 'state', patch: { session: '{args}' } },
+              { type: 'print', lines: [{ text: '✓ Session named "{session}"', style: 'ok', note: { zh: '改名成功，状态栏与 /resume 列表里都会显示' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -356,6 +600,19 @@ export const pi: AgentDef = {
               detail: 'pi 的会话是树形结构：每次分叉都是一个分支。/tree 里可以回到任意历史节点接着聊，走错路了直接跳回去。',
             },
           },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '● user: 帮我重构认证模块', style: 'accent' },
+                  { text: '├── assistant: 我先看下现有代码…', style: 'dim' },
+                  { text: '│   └── user: 改用 JWT 方案  ◀ current', style: 'ok', note: { zh: '当前所在的分支' } },
+                  { text: '└── user: 先补测试再动手', style: 'dim', note: { zh: '另一条分叉——选中任意节点即可从那里继续' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -363,6 +620,15 @@ export const pi: AgentDef = {
           example: '/fork',
           en: 'Create a new session branching from a previous user message',
           i18n: { zh: { summary: '从之前某条消息分叉出新会话' } },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { session: '(fork)' } },
+              {
+                type: 'print',
+                lines: [{ text: '✓ Forked into new session 0199b3c4', style: 'ok', note: { zh: '原会话保持不动，新分支独立成一个会话文件' } }],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -376,12 +642,18 @@ export const pi: AgentDef = {
           name: '/compact',
           argSpec: '[prompt]',
           example: '/compact',
-          en: 'Manually compress the context',
+          en: 'Manually compress the context, optionally with custom instructions',
           i18n: {
             zh: {
               summary: '手动压缩上下文',
               detail: '上下文快满时把历史压成摘要。可以附加提示告诉它压缩时保留什么重点。',
             },
+          },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { context: '4%' } },
+              { type: 'compact', summary: { zh: '此前的对话已折叠为摘要，上下文占用大幅下降（看状态栏）' } },
+            ],
           },
         },
         {
@@ -398,6 +670,14 @@ export const pi: AgentDef = {
           example: '/export',
           en: 'Export the session to HTML or JSONL',
           i18n: { zh: { summary: '导出会话为 HTML 或 JSONL 文件' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [{ text: '✓ Exported to pi-session-2026-07-27.html', style: 'ok', note: { zh: '单文件 HTML，发给别人直接就能看（仿真）' } }],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -413,6 +693,17 @@ export const pi: AgentDef = {
           example: '/share',
           en: 'Upload the session as a private GitHub gist with an HTML link',
           i18n: { zh: { summary: '把会话上传为私有 GitHub gist 并生成可看的链接' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Uploading session as private gist…', style: 'dim' },
+                  { text: '✓ https://pi.dev/session/#gist=abc123', style: 'ok', note: { zh: '私有 gist + 可分享的 HTML 查看链接（仿真）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -425,6 +716,14 @@ export const pi: AgentDef = {
               detail: 'pi 默认不自动加载项目目录里的扩展/技能等文件，需要你确认。启动时也可以用 -a 临时信任、-na 临时忽略。',
             },
           },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [{ text: '✓ Project trusted — local extensions, skills and prompts will load.', style: 'ok', note: { zh: '此决定已持久保存，之后启动不再询问' } }],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -432,6 +731,14 @@ export const pi: AgentDef = {
           example: '/reload',
           en: 'Reload keybindings, extensions, skills, prompts, themes and context files',
           i18n: { zh: { summary: '热重载扩展、技能、主题等所有自定义内容', detail: '改完扩展代码不用重启 pi，/reload 一下就生效。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [{ text: '✓ Reloaded 2 extensions, 3 skills, 1 theme, keybindings', style: 'ok', note: { zh: '开发扩展时的高频操作：改代码 → /reload 即生效' } }],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -460,6 +767,9 @@ export const pi: AgentDef = {
           example: '/quit',
           en: 'Exit pi',
           i18n: { zh: { summary: '退出 pi' } },
+          simulate: {
+            effects: [{ type: 'exitSession', lines: [{ text: 'Session saved to ~/.pi/sessions/0199a1b2-4c3d.jsonl', style: 'dim', note: { zh: '退出前会话已自动落盘' } }] }],
+          },
         },
       ],
     },
@@ -470,11 +780,11 @@ export const pi: AgentDef = {
         {
           kind: 'shortcut',
           name: 'Enter',
-          en: 'Queue a steering message — delivered after current tool calls, interrupting remaining ones',
+          en: 'Queue a steering message — delivered after the current tool call, interrupting remaining ones',
           i18n: {
             zh: {
               summary: '发送"转向"消息：当前工具执行完就插话',
-              detail: 'pi 的特色交互——agent 干活途中随时输入并回车，消息会在下一个工具调用后送达，及时纠偏而不必打断重来。',
+              detail: 'pi 的特色交互——agent 干活途中随时输入并回车，消息会在下一个工具调用后送达，及时纠偏而不必打断重来。送达时机可在 /settings 里调整。',
             },
           },
         },
@@ -492,9 +802,33 @@ export const pi: AgentDef = {
         },
         {
           kind: 'shortcut',
+          name: 'Ctrl+L',
+          en: 'Open the model selector',
+          i18n: { zh: { summary: '打开模型选择器（等同 /model）' } },
+        },
+        {
+          kind: 'shortcut',
           name: 'Ctrl+P',
-          en: 'Cycle through your scoped favorite models',
-          i18n: { zh: { summary: '在常用模型之间循环切换' } },
+          en: 'Cycle through your scoped favorite models (Shift+Ctrl+P cycles backward)',
+          i18n: { zh: { summary: '在常用模型之间循环切换', detail: '模型清单由 --models 或 /scoped-models 定义；Shift+Ctrl+P 反向轮换。' } },
+        },
+        {
+          kind: 'shortcut',
+          name: 'Shift+Tab',
+          en: 'Cycle the thinking level',
+          i18n: { zh: { summary: '循环切换思考深度（off → … → max）' } },
+        },
+        {
+          kind: 'shortcut',
+          name: 'Ctrl+O',
+          en: 'Collapse or expand tool output',
+          i18n: { zh: { summary: '折叠/展开工具输出' } },
+        },
+        {
+          kind: 'shortcut',
+          name: 'Ctrl+T',
+          en: 'Collapse or expand thinking blocks',
+          i18n: { zh: { summary: '折叠/展开思考过程' } },
         },
         {
           kind: 'shortcut',

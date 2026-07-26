@@ -31,6 +31,13 @@ const strings = {
     langLabel: '中文',
     tryIt: '点击试一试',
     shortcutNote: '这是快捷键，在真实终端里直接按键使用',
+    simExitNote: '已退出仿真会话，回到 shell。',
+    simDisclaimer: '（仿真提示：本站不会真的调用模型或改动文件，仅演示真实 CLI 的行为）',
+    simUnknownHint: '输入 /help 查看该工具的全部命令',
+    simCompacted: '✂ 对话已压缩，摘要：',
+    simPanelHint: '点击条目可切换（仿真）',
+    simChatHint: '普通文本会作为消息发给 AI —— 下面是仿真回复',
+    simSessionHint: '你正在仿真会话中：可输入斜杠命令，或敲 exit 退出',
     kindLabels: {
       flag: '选项',
       subcommand: '子命令',

@@ -24,4 +24,35 @@ describe('命令数据完整性', () => {
       }
     }
   });
+
+  it.each(agents.map((a) => [a.name, a] as const))('%s 模拟规格与会话配置一致', (_name, agent) => {
+    const stateKeys = new Set((agent.session?.statusFields ?? []).map((f) => f.key));
+    if (agent.session) {
+      expect(agent.session.banner.length).toBeGreaterThan(0);
+      expect(agent.session.statusFields.length).toBeGreaterThan(0);
+      expect(agent.session.chatReply.length).toBeGreaterThan(0);
+      for (const f of agent.session.statusFields) expect(f.label.zh.length).toBeGreaterThan(0);
+    }
+    for (const cat of agent.categories) {
+      for (const e of cat.entries) {
+        if (!e.simulate) continue;
+        // 有模拟规格的 agent 必须配置了会话（shell-only preventSession 除外）
+        if (!e.simulate.preventSession) expect(agent.session).toBeDefined();
+        for (const eff of [...e.simulate.effects, ...(e.simulate.argEffects ?? [])]) {
+          if (eff.type === 'state') {
+            for (const key of Object.keys(eff.patch)) {
+              expect(stateKeys.has(key), `${agent.id} ${e.name}: state 键 ${key} 不在 statusFields 中`).toBe(true);
+            }
+          }
+          if (eff.type === 'panel' && eff.panel.stateKey) {
+            expect(stateKeys.has(eff.panel.stateKey), `${agent.id} ${e.name}: panel.stateKey 无效`).toBe(true);
+          }
+          if (eff.type === 'panel') {
+            expect(eff.panel.title.zh.length).toBeGreaterThan(0);
+            expect(eff.panel.items.length).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
+  });
 });

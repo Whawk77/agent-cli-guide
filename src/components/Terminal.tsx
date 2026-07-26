@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentDef, CommandEntry } from '../data/types';
 import { applySuggestion, detectOtherAgent, isHelpRequest, parse, suggest } from '../lib/parser';
+import {
+  executeSession,
+  executeShell,
+  initialState,
+  type SimBlock,
+  type SimState,
+  type TermMode,
+} from '../lib/simEngine';
+import EntryCard from './EntryCard';
+import HelpView from './HelpView';
+import SimBlockView from './SimBlockView';
+import SessionStatusBar from './SessionStatusBar';
 import { locale, t } from '../i18n/ui';
 
 export interface TermAction {
@@ -10,10 +22,11 @@ export interface TermAction {
 }
 
 type Block =
-  | { type: 'cmd'; text: string }
+  | { type: 'cmd'; text: string; prompt: string }
   | { type: 'cards'; entries: CommandEntry[]; unknown: string[] }
   | { type: 'help' }
-  | { type: 'error'; text: string };
+  | { type: 'error'; text: string }
+  | { type: 'sim'; sim: SimBlock };
 
 interface Props {
   agent: AgentDef;
@@ -22,66 +35,10 @@ interface Props {
   onSwitchAgent: (id: string) => void;
 }
 
-function EntryCard({ entry, onTry }: { entry: CommandEntry; onTry: (text: string) => void }) {
-  const zh = entry.i18n[locale];
-  return (
-    <div className="entry-card">
-      <div className="entry-card-head">
-        <span className={`kind-badge kind-${entry.kind}`}>{t.kindLabels[entry.kind]}</span>
-        <code className="entry-name">
-          {entry.name}
-          {entry.argSpec ? ` ${entry.argSpec}` : ''}
-        </code>
-        {entry.aliases?.length ? (
-          <span className="entry-aliases">
-            {t.aliases}: {entry.aliases.join(', ')}
-          </span>
-        ) : null}
-      </div>
-      <div className="entry-zh">{zh.summary}</div>
-      <div className="entry-en">
-        {t.original}: {entry.en}
-      </div>
-      {zh.detail ? <div className="entry-detail">{zh.detail}</div> : null}
-      {entry.kind === 'shortcut' ? (
-        <div className="entry-example-note">{t.shortcutNote}</div>
-      ) : entry.example ? (
-        <button className="entry-example" onClick={() => onTry(entry.example!)}>
-          <span className="entry-example-label">{t.example}</span> <code>{entry.example}</code>
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-function HelpView({ agent }: { agent: AgentDef }) {
-  return (
-    <div className="help-view">
-      <div className="help-usage">
-        {t.helpUsage}: <code>{agent.binary} [options] [command]</code>
-      </div>
-      {agent.categories.map((cat) => (
-        <div key={cat.id} className="help-cat">
-          <div className="help-cat-title">{cat.i18n[locale].title}</div>
-          {cat.entries.map((e) => (
-            <div key={e.name} className="help-row">
-              <code className="help-row-name">
-                {e.name}
-                {e.aliases?.length ? `, ${e.aliases.join(', ')}` : ''}
-                {e.argSpec ? ` ${e.argSpec}` : ''}
-              </code>
-              <span className="help-row-zh">{e.i18n[locale].summary}</span>
-              <span className="help-row-en">{e.en}</span>
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function Terminal({ agent, agents, action, onSwitchAgent }: Props) {
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [mode, setMode] = useState<TermMode>('shell');
+  const [simState, setSimState] = useState<SimState>({});
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx] = useState(-1);
@@ -90,16 +47,23 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const promptText = mode === 'session' && agent.session ? agent.session.prompt : agent.prompt;
   const tokens = useMemo(() => parse(input, agent), [input, agent]);
-  const suggestions = useMemo(() => suggest(input, agent), [input, agent]);
-  const otherAgent = useMemo(() => detectOtherAgent(input, agent, agents), [input, agent, agents]);
+  const suggestions = useMemo(() => suggest(input, agent, locale, mode), [input, agent, mode]);
+  const otherAgent = useMemo(
+    () => (mode === 'shell' ? detectOtherAgent(input, agent, agents) : undefined),
+    [input, agent, agents, mode],
+  );
 
-  // 切换 agent 时清空终端
+  // 切换 agent 时重置终端与仿真状态
   useEffect(() => {
     setBlocks([]);
+    setMode('shell');
+    setSimState(initialState(agent));
     setInput('');
     setHistory([]);
     setHistIdx(-1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent.id]);
 
   // 侧边栏/搜索触发的动作
@@ -133,12 +97,37 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
     setInput('');
     setSugOpen(true);
 
+    const echo: Block = { type: 'cmd', text, prompt: promptText };
+
+    if (mode === 'session' && agent.session) {
+      const res = executeSession(text, agent, simState, locale);
+      const simBlocks: Block[] = res.blocks.map((sim) => ({ type: 'sim', sim }));
+      if (res.clear) {
+        setBlocks(simBlocks);
+      } else if (res.compact) {
+        setBlocks(simBlocks);
+      } else {
+        setBlocks((b) => [...b, echo, ...simBlocks]);
+      }
+      setMode(res.nextMode);
+      setSimState(res.nextState);
+      return;
+    }
+
+    // shell 层
     if (text === 'clear') {
       setBlocks([]);
       return;
     }
+    const simRes = executeShell(text, agent, locale);
+    if (simRes) {
+      setBlocks((b) => [...b, echo, ...simRes.blocks.map((sim): Block => ({ type: 'sim', sim }))]);
+      setMode(simRes.nextMode);
+      setSimState(simRes.nextState);
+      return;
+    }
 
-    const next: Block[] = [{ type: 'cmd', text }];
+    const next: Block[] = [echo];
     if (isHelpRequest(text, agent)) {
       next.push({ type: 'help' });
     } else {
@@ -153,10 +142,7 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
       if (entries.length > 0) {
         next.push({ type: 'cards', entries, unknown });
       } else {
-        next.push({
-          type: 'error',
-          text: `${t.unknownCommand} ${agent.binary} --help`,
-        });
+        next.push({ type: 'error', text: `${t.unknownCommand} ${agent.binary} --help` });
       }
     }
     setBlocks((b) => [...b, ...next]);
@@ -214,6 +200,49 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
     }
   };
 
+  const renderBlock = (b: Block, i: number) => {
+    switch (b.type) {
+      case 'cmd':
+        return (
+          <div key={i} className="block-cmd">
+            <span className="prompt">{b.prompt}</span> <code>{b.text}</code>
+          </div>
+        );
+      case 'help':
+        return <HelpView key={i} agent={agent} />;
+      case 'cards':
+        return (
+          <div key={i} className="block-cards">
+            {b.entries.map((e) => (
+              <EntryCard key={e.name} entry={e} onTry={insertAndFocus} />
+            ))}
+            {b.unknown.map((u) => (
+              <div key={u} className="unknown-note">
+                <code>{u}</code> — {u.startsWith('/') ? t.unknownSlash : t.unknownFlag}
+              </div>
+            ))}
+          </div>
+        );
+      case 'error':
+        return (
+          <div key={i} className="block-error">
+            {b.text}
+          </div>
+        );
+      case 'sim':
+        return (
+          <SimBlockView
+            key={i}
+            block={b.sim}
+            agent={agent}
+            state={simState}
+            onPanelSelect={(stateKey, value) => setSimState((s) => ({ ...s, [stateKey]: value }))}
+            onTry={insertAndFocus}
+          />
+        );
+    }
+  };
+
   return (
     <div className="terminal">
       <div className="term-titlebar">
@@ -222,6 +251,7 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
         <span className="dot dot-g" />
         <span className="term-title">
           {agent.name} — {t.appTitle}
+          {mode === 'session' ? ' · 仿真会话中' : ''}
         </span>
       </div>
       <div className="term-scroll" ref={scrollRef} onClick={() => inputRef.current?.focus()}>
@@ -243,42 +273,18 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
             </a>
           </div>
           <div className="welcome-hint">
-            {t.welcomeHint1} <button className="inline-cmd" onClick={() => insertAndFocus(`${agent.binary} --help`)}>
+            {t.welcomeHint1}{' '}
+            <button className="inline-cmd" onClick={() => insertAndFocus(agent.binary)}>
+              <code>{agent.binary}</code>
+            </button>{' '}
+            或{' '}
+            <button className="inline-cmd" onClick={() => insertAndFocus(`${agent.binary} --help`)}>
               <code>{agent.binary} --help</code>
-            </button> {t.welcomeHint2}
+            </button>{' '}
+            {t.welcomeHint2}
           </div>
         </div>
-        {blocks.map((b, i) => {
-          switch (b.type) {
-            case 'cmd':
-              return (
-                <div key={i} className="block-cmd">
-                  <span className="prompt">{agent.prompt}</span> <code>{b.text}</code>
-                </div>
-              );
-            case 'help':
-              return <HelpView key={i} agent={agent} />;
-            case 'cards':
-              return (
-                <div key={i} className="block-cards">
-                  {b.entries.map((e) => (
-                    <EntryCard key={e.name} entry={e} onTry={insertAndFocus} />
-                  ))}
-                  {b.unknown.map((u) => (
-                    <div key={u} className="unknown-note">
-                      <code>{u}</code> — {u.startsWith('/') ? t.unknownSlash : t.unknownFlag}
-                    </div>
-                  ))}
-                </div>
-              );
-            case 'error':
-              return (
-                <div key={i} className="block-error">
-                  {b.text}
-                </div>
-              );
-          }
-        })}
+        {blocks.map(renderBlock)}
       </div>
       <div className="term-input-wrap">
         {showSuggestions && (
@@ -301,11 +307,11 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
           </ul>
         )}
         <div className="term-input-row">
-          <span className="prompt">{agent.prompt}</span>
+          <span className={mode === 'session' ? 'prompt prompt-session' : 'prompt'}>{promptText}</span>
           <input
             ref={inputRef}
             value={input}
-            placeholder={t.inputPlaceholder}
+            placeholder={mode === 'session' ? t.simSessionHint : t.inputPlaceholder}
             spellCheck={false}
             autoComplete="off"
             onChange={(e) => {
@@ -317,6 +323,9 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
           />
         </div>
       </div>
+      {mode === 'session' && agent.session ? (
+        <SessionStatusBar agent={agent} state={simState} />
+      ) : null}
       <div className="annotation">
         <div className="annotation-title">{t.annotationTitle}</div>
         {otherAgent ? (
@@ -324,7 +333,9 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
             {t.switchHint} {otherAgent.name} →
           </button>
         ) : null}
-        {tokens.length === 0 ? (
+        {mode === 'session' && input.trim() !== '' && !input.trim().startsWith('/') ? (
+          <div className="annotation-empty">{t.simChatHint}</div>
+        ) : tokens.length === 0 ? (
           <div className="annotation-empty">{t.annotationEmpty}</div>
         ) : (
           <ul className="token-list">

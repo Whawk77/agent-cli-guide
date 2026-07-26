@@ -98,7 +98,12 @@ export interface Suggestion {
 }
 
 /** 基于最后一个正在输入的词给出补全建议 */
-export function suggest(input: string, agent: AgentDef, locale: 'zh' = 'zh'): Suggestion[] {
+export function suggest(
+  input: string,
+  agent: AgentDef,
+  locale: 'zh' = 'zh',
+  mode: 'shell' | 'session' = 'shell',
+): Suggestion[] {
   if (input.endsWith(' ') || input.trim() === '') return [];
   const words = tokenizeWords(input);
   const last = words[words.length - 1];
@@ -108,6 +113,16 @@ export function suggest(input: string, agent: AgentDef, locale: 'zh' = 'zh'): Su
 
   const pushEntry = (e: CommandEntry) =>
     out.push({ entry: e, insert: e.name, label: e.name + (e.argSpec ? ' ' + e.argSpec : ''), summary: e.i18n[locale].summary });
+
+  // 会话层：只提示斜杠命令和 exit
+  if (mode === 'session') {
+    if (isFirst && last.startsWith('/')) {
+      all.filter((e) => e.kind === 'slash' && e.name.startsWith(last)).forEach(pushEntry);
+    } else if (isFirst && 'exit'.startsWith(last) && last !== 'exit') {
+      out.push({ insert: 'exit', label: 'exit', summary: '退出仿真会话' });
+    }
+    return out.slice(0, 8);
+  }
 
   if (isFirst && last.startsWith('/')) {
     all.filter((e) => e.kind === 'slash' && e.name.startsWith(last)).forEach(pushEntry);

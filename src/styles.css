@@ -794,3 +794,165 @@ a {
     min-width: 80px;
   }
 }
+
+/* ── 仿真会话 ─────────────────────── */
+.prompt-session {
+  color: var(--purple);
+}
+
+.session-banner {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 10px 14px;
+  margin: 6px 0 10px;
+  max-width: 720px;
+}
+
+.sim-print {
+  margin: 4px 0;
+}
+
+.sim-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.sim-dim .sim-text,
+.sim-line.sim-dim {
+  color: var(--muted);
+}
+
+.sim-accent .sim-text {
+  color: var(--accent);
+}
+
+.sim-ok .sim-text {
+  color: var(--green);
+}
+
+.sim-warn .sim-text {
+  color: var(--amber);
+}
+
+.sim-note {
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 12px;
+}
+
+.sim-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px 10px;
+  margin: 6px 0 10px;
+  max-width: 560px;
+}
+
+.sim-panel-title {
+  font-weight: 600;
+  margin: 2px 4px 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.sim-panel-hint {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.sim-panel ul {
+  list-style: none;
+}
+
+.panel-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.panel-item:not(:disabled):hover {
+  background: var(--panel-2);
+}
+
+.panel-item.active code {
+  color: var(--green);
+}
+
+.panel-check {
+  font-family: var(--mono);
+  color: var(--green);
+  width: 12px;
+}
+
+.panel-item code {
+  color: var(--amber);
+}
+
+.panel-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sim-chat {
+  margin: 4px 0 8px;
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+}
+
+.block-compacted {
+  color: var(--amber);
+  border: 1px dashed var(--amber);
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin: 8px 0;
+  font-size: 13px;
+  max-width: 720px;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.status-agent {
+  color: var(--purple);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-field {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.status-label {
+  color: var(--muted);
+}
+
+.status-value {
+  color: var(--green);
+}

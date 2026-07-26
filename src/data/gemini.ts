@@ -12,6 +12,32 @@ export const gemini: AgentDef = {
     zh: 'Google 开源的终端 AI 代理，把 Gemini 模型接进命令行，读代码、跑命令、装扩展一站搞定。',
   },
   coverage: 'full',
+  session: {
+    prompt: '>',
+    banner: [
+      { text: ' ██████╗ ███████╗███╗   ███╗██╗███╗   ██╗██╗', style: 'accent' },
+      { text: '██╔════╝ ██╔════╝████╗ ████║██║████╗  ██║██║', style: 'accent' },
+      { text: '██║  ███╗█████╗  ██╔████╔██║██║██╔██╗ ██║██║', style: 'accent' },
+      { text: '██║   ██║██╔══╝  ██║╚██╔╝██║██║██║╚██╗██║██║', style: 'accent' },
+      { text: '╚██████╔╝███████╗██║ ╚═╝ ██║██║██║ ╚████║██║', style: 'accent', note: { zh: '真实 CLI 是整屏渐变色 ASCII Logo，这里是简化版' } },
+      { text: 'Tips: ask questions, edit files, or run commands.', style: 'dim' },
+      { text: 'model: {model} · approval: {approval} · /help for more information', style: 'dim', note: { zh: '当前模型与审批模式；输入 /help 查看命令，/quit 退出' } },
+    ],
+    statusFields: [
+      { key: 'model', label: { zh: '模型' }, initial: 'auto', options: ['auto', 'pro', 'flash', 'flash-lite'] },
+      { key: 'approval', label: { zh: '审批模式' }, initial: 'default', options: ['default', 'auto_edit', 'plan', 'yolo'] },
+      { key: 'sandbox', label: { zh: '沙箱' }, initial: 'off', options: ['off', 'on'] },
+      { key: 'context', label: { zh: '上下文余量' }, initial: '100%' },
+      { key: 'theme', label: { zh: '主题' }, initial: 'Default', options: ['Default', 'Default Light', 'GitHub', 'Atom One', 'Ayu', 'Dracula', 'ANSI'] },
+    ],
+    chatReply: [
+      { text: '✦ Thinking…', style: 'dim' },
+      {
+        text: 'Got it — I will read the relevant files and take it from there.',
+        note: { zh: '真实的 Gemini CLI 会规划步骤、调用工具读写文件、执行命令并汇报结果' },
+      },
+    ],
+  },
   categories: [
     {
       id: 'cli-flags',
@@ -27,9 +53,10 @@ export const gemini: AgentDef = {
           i18n: {
             zh: {
               summary: '指定本次会话使用的模型',
-              detail: '可以用别名：auto（默认，自动选 Pro 系）、pro（复杂推理）、flash（快而均衡）、flash-lite（最快），也可以写完整模型名如 gemini-2.5-pro。',
+              detail: '可以用别名：auto（默认，按任务自动路由）、pro（复杂推理）、flash（快而均衡）、flash-lite（最快），也可以写完整模型名如 gemini-3-pro-preview。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { model: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -43,6 +70,17 @@ export const gemini: AgentDef = {
               summary: '非交互模式：执行提示词后直接退出',
               detail: '适合脚本和管道，比如 cat logs.txt | gemini -p "找出报错原因"。有 stdin 输入时提示词会附加在后面。',
             },
+          },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '(model response printed to stdout)', style: 'dim', note: { zh: '结果直接打印到标准输出后退出，不进入会话——适合脚本和管道' } },
+                ],
+              },
+            ],
           },
         },
         {
@@ -58,6 +96,16 @@ export const gemini: AgentDef = {
               detail: '和 -p 的区别：-p 输出完就退出，-i 会带着结果进入 REPL 接着干活。',
             },
           },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '✦ Running your prompt first…', style: 'dim', note: { zh: '先执行提示词，随后进入交互会话继续' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'flag',
@@ -72,6 +120,16 @@ export const gemini: AgentDef = {
               detail: '用 "latest" 恢复最近一次，或用 --list-sessions 查到的序号/会话 ID。还可以顺带给新提示词：gemini -r latest "继续检查类型错误"。',
             },
           },
+          simulate: {
+            effects: [
+              { type: 'print', lines: [{ text: 'Resuming latest session…', style: 'dim', note: { zh: '恢复最近一次会话（仿真）' } }] },
+              { type: 'state', patch: { context: '62%' } },
+            ],
+            argEffects: [
+              { type: 'print', lines: [{ text: 'Resuming session {arg}…', style: 'dim', note: { zh: '恢复指定会话，上下文余量随之下降（看状态栏）' } }] },
+              { type: 'state', patch: { context: '62%' } },
+            ],
+          },
         },
         {
           kind: 'flag',
@@ -79,6 +137,28 @@ export const gemini: AgentDef = {
           example: 'gemini --list-sessions',
           en: 'List available sessions for the current project and exit',
           i18n: { zh: { summary: '列出当前项目的历史会话后退出' } },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Available sessions for this project:', style: 'accent' },
+                  { text: '  1. feat: add login flow        (2 hours ago)', style: 'dim' },
+                  { text: '  2. debug flaky auth tests      (yesterday)', style: 'dim' },
+                  { text: '  3. refactor api client         (3 days ago)', style: 'dim', note: { zh: '用 gemini -r <序号> 恢复对应会话' } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'flag',
+          name: '--delete-session',
+          argSpec: '<index>',
+          example: 'gemini --delete-session 2',
+          en: 'Delete a session by index number (from --list-sessions)',
+          i18n: { zh: { summary: '按序号删除某个历史会话', detail: '序号来自 --list-sessions 的输出。' } },
         },
         {
           kind: 'flag',
@@ -91,6 +171,12 @@ export const gemini: AgentDef = {
               summary: '在沙箱环境中运行（更安全）',
               detail: '把模型执行的命令隔离在沙箱（如 Docker/Podman 或 macOS Seatbelt）里，防止误伤系统。放开权限跑任务前建议先开它。',
             },
+          },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { sandbox: 'on' } },
+              { type: 'print', lines: [{ text: '✓ Sandbox enabled (macOS Seatbelt)', style: 'ok', note: { zh: '模型执行的命令将被隔离在沙箱里（看状态栏）' } }] },
+            ],
           },
         },
         {
@@ -105,6 +191,7 @@ export const gemini: AgentDef = {
               detail: 'default 每次询问；auto_edit 自动批准文件编辑；yolo 全部自动批准（危险）；plan 只读规划模式。会话中按 Shift+Tab 也能循环切换。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { approval: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -117,6 +204,12 @@ export const gemini: AgentDef = {
               summary: '自动批准所有操作（已弃用，危险）',
               detail: '官方已建议改用 --approval-mode=yolo。只在容器/沙箱等隔离环境里使用，最好搭配 --sandbox。',
             },
+          },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { approval: 'yolo' } },
+              { type: 'print', lines: [{ text: '⚠ YOLO mode: all tool calls are auto-approved.', style: 'warn', note: { zh: '所有操作免确认执行（注意状态栏变化），务必搭配沙箱' } }] },
+            ],
           },
         },
         {
@@ -157,6 +250,28 @@ export const gemini: AgentDef = {
         },
         {
           kind: 'flag',
+          name: '--list-extensions',
+          aliases: ['-l'],
+          example: 'gemini --list-extensions',
+          en: 'List all available extensions and exit',
+          i18n: { zh: { summary: '列出所有可用扩展后退出' } },
+        },
+        {
+          kind: 'flag',
+          name: '--skip-trust',
+          example: 'gemini --skip-trust',
+          en: 'Trust the current workspace without a confirmation dialog',
+          i18n: { zh: { summary: '跳过“是否信任此文件夹”的确认弹窗', detail: '直接把当前工作区标记为受信任。也可在会话中用 /permissions trust 管理。' } },
+        },
+        {
+          kind: 'flag',
+          name: '--screen-reader',
+          example: 'gemini --screen-reader',
+          en: 'Enable screen reader mode for accessibility',
+          i18n: { zh: { summary: '启用屏幕阅读器无障碍模式' } },
+        },
+        {
+          kind: 'flag',
           name: '--output-format',
           aliases: ['-o'],
           argSpec: '<format>',
@@ -184,6 +299,10 @@ export const gemini: AgentDef = {
           example: 'gemini --version',
           en: 'Show CLI version number and exit',
           i18n: { zh: { summary: '查看版本号' } },
+          simulate: {
+            preventSession: true,
+            effects: [{ type: 'print', lines: [{ text: '0.52.0', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+          },
         },
         {
           kind: 'flag',
@@ -209,6 +328,18 @@ export const gemini: AgentDef = {
               summary: '管理 MCP 服务器（添加/删除/列出）',
               detail: '如 gemini mcp add github npx -y @modelcontextprotocol/server-github；HTTP 服务加 --transport http；--scope user 装到用户级；--include-tools 限定可用工具。',
             },
+          },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'No MCP servers configured.', style: 'dim' },
+                  { text: 'Run `gemini mcp add <name> <command>` to add one.', style: 'dim', note: { zh: '还没有配置 MCP 服务器；用 gemini mcp add 添加' } },
+                ],
+              },
+            ],
           },
         },
         {
@@ -241,6 +372,10 @@ export const gemini: AgentDef = {
           example: 'gemini update',
           en: 'Update Gemini CLI to the latest version',
           i18n: { zh: { summary: '更新到最新版本' } },
+          simulate: {
+            preventSession: true,
+            effects: [{ type: 'print', lines: [{ text: '✓ Gemini CLI is already up to date (v0.52.0).', style: 'ok', note: { zh: '已是最新版本' } }] }],
+          },
         },
       ],
     },
@@ -258,6 +393,28 @@ export const gemini: AgentDef = {
         },
         {
           kind: 'slash',
+          name: '/about',
+          example: '/about',
+          en: 'Show version and environment info; share it when filing issues',
+          i18n: { zh: { summary: '查看版本与环境信息', detail: '提 bug 时把这些信息一起贴上，方便定位问题。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'About Gemini CLI', style: 'accent' },
+                  { text: 'CLI Version     0.52.0', style: 'dim' },
+                  { text: 'Model           {model}', style: 'dim' },
+                  { text: 'Sandbox         {sandbox}', style: 'dim' },
+                  { text: 'OS              darwin', style: 'dim' },
+                  { text: 'Auth Method     oauth-personal', style: 'dim', note: { zh: '提 issue 时请附上这些信息（仿真输出）' } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
           name: '/clear',
           example: '/clear',
           en: 'Clear the terminal screen and visible session history',
@@ -266,6 +423,12 @@ export const gemini: AgentDef = {
               summary: '清屏并清掉可见的会话记录',
               detail: '快捷键 Ctrl+L 同效。注意它清的是屏幕显示；要压缩上下文省 token 用 /compress。',
             },
+          },
+          simulate: {
+            effects: [
+              { type: 'clear' },
+              { type: 'print', lines: [{ text: 'Screen and scrollback cleared.', style: 'dim', note: { zh: '屏幕已清空；上下文仍保留，想省 token 用 /compress' } }] },
+            ],
           },
         },
         {
@@ -278,6 +441,23 @@ export const gemini: AgentDef = {
               summary: '把整个对话上下文压缩成摘要',
               detail: '对话太长、上下文快满时用。保留任务概要，释放 token 空间，相当于 Claude Code 的 /compact。',
             },
+          },
+          simulate: {
+            effects: [
+              { type: 'print', lines: [{ text: '✦ Chat history compressed from 41,203 to 3,847 tokens.', style: 'ok', note: { zh: '整段历史被替换为一条摘要' } }] },
+              { type: 'state', patch: { context: '97%' } },
+              { type: 'compact', summary: { zh: '此前的对话已压缩为摘要，上下文余量回升（看状态栏）' } },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/copy',
+          example: '/copy',
+          en: 'Copy the last output to the clipboard',
+          i18n: { zh: { summary: '复制上一条输出到剪贴板' } },
+          simulate: {
+            effects: [{ type: 'print', lines: [{ text: '✓ Last output copied to clipboard.', style: 'ok', note: { zh: '上一条回复已复制（仿真）' } }] }],
           },
         },
         {
@@ -305,6 +485,21 @@ export const gemini: AgentDef = {
               detail: 'GEMINI.md 是项目/全局层级的上下文文件。show 查看拼接后的完整内容，refresh 改完文件后重新加载，list 列出生效的文件路径。',
             },
           },
+          simulate: {
+            effects: [
+              { type: 'print', lines: [{ text: 'Usage: /memory <show|refresh|list>', style: 'dim', note: { zh: '需要带子命令，比如 /memory show' } }] },
+            ],
+            argEffects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Memory loaded from 2 file(s):', style: 'accent' },
+                  { text: '  ~/.gemini/GEMINI.md   (global)', style: 'dim' },
+                  { text: '  ./GEMINI.md           (project)', style: 'dim', note: { zh: '层级记忆：全局在前、项目在后拼接（/memory show 的仿真输出）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -316,6 +511,17 @@ export const gemini: AgentDef = {
               summary: '分析当前项目，自动生成 GEMINI.md',
               detail: '生成后每次会话自动加载，写入项目约定、构建命令等，相当于 Claude Code 的 CLAUDE.md。',
             },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '✦ Analyzing project structure…', style: 'dim' },
+                  { text: '✓ GEMINI.md created — it will be loaded automatically in future sessions.', style: 'ok', note: { zh: '生成项目上下文文件，之后每次会话自动加载（仿真）' } },
+                ],
+              },
+            ],
           },
         },
         {
@@ -329,6 +535,17 @@ export const gemini: AgentDef = {
               detail: 'list 列出服务器和工具（默认）；desc/schema 看详细描述和参数；auth <server> 走 OAuth 登录；reload 重连并重新发现工具。',
             },
           },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'No MCP servers configured.', style: 'dim' },
+                  { text: 'Add one with `gemini mcp add` or in settings.json.', style: 'dim', note: { zh: '还没有配置 MCP 服务器（仿真）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -337,6 +554,21 @@ export const gemini: AgentDef = {
           example: '/tools',
           en: 'Display the list of tools currently available to the model',
           i18n: { zh: { summary: '查看当前可用的工具列表', detail: '/tools desc 显示每个工具给模型看的完整描述。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Available Gemini CLI tools:', style: 'accent' },
+                  { text: '  - Edit            - ReadFile', style: 'dim' },
+                  { text: '  - WriteFile       - ReadFolder', style: 'dim' },
+                  { text: '  - FindFiles       - SearchText', style: 'dim' },
+                  { text: '  - Shell           - WebFetch', style: 'dim' },
+                  { text: '  - GoogleSearch    - SaveMemory', style: 'dim', note: { zh: '内置工具列表；/tools desc 可看完整描述（仿真）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -344,6 +576,23 @@ export const gemini: AgentDef = {
           example: '/model set flash',
           en: 'Manage model configuration (manage opens a dialog; set switches model)',
           i18n: { zh: { summary: '会话中查看/切换模型', detail: '/model manage 打开配置面板；/model set <名称> [--persist] 直接切换，加 --persist 持久保存。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择模型（点击切换）' },
+                  stateKey: 'model',
+                  items: [
+                    { value: 'auto', label: 'Auto (Gemini 3)', note: { zh: '默认：按任务自动路由 Pro / Flash' } },
+                    { value: 'pro', label: 'gemini-3-pro-preview', note: { zh: '最强推理，复杂任务' } },
+                    { value: 'flash', label: 'gemini-3-flash-preview', note: { zh: '快而均衡' } },
+                    { value: 'flash-lite', label: 'gemini-2.5-flash-lite', note: { zh: '最快最省' } },
+                  ],
+                },
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -355,6 +604,22 @@ export const gemini: AgentDef = {
               summary: '查看本次会话的统计信息',
               detail: '默认显示会话维度（时长、工具调用、性能）；/stats model 看 token 用量和配额；/stats tools 看各工具使用情况。',
             },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Session Stats', style: 'accent' },
+                  { text: 'Interaction Summary', style: 'dim' },
+                  { text: '  Turns           12', style: 'dim' },
+                  { text: '  Tool calls      7 ( ✓ 7  ✗ 0 )', style: 'dim', note: { zh: '本次会话的轮数与工具调用成功率' } },
+                  { text: 'Performance', style: 'dim' },
+                  { text: '  Wall time       18m 42s', style: 'dim' },
+                  { text: '  Agent active    6m 03s', style: 'dim', note: { zh: '/stats model 看 token 与配额，/stats tools 看工具明细（仿真）' } },
+                ],
+              },
+            ],
           },
         },
         {
@@ -393,6 +658,12 @@ export const gemini: AgentDef = {
               detail: '规划模式下只读不改，先出方案再动手。/plan copy 把已批准的方案复制到剪贴板。',
             },
           },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { approval: 'plan' } },
+              { type: 'print', lines: [{ text: 'Entered Plan Mode — read-only until a plan is approved.', style: 'accent', note: { zh: '只读规划模式：先出方案再动手（看状态栏审批模式）' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -407,6 +678,50 @@ export const gemini: AgentDef = {
           example: '/theme',
           en: 'Open a dialog to change the visual theme',
           i18n: { zh: { summary: '切换界面主题配色' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择主题（点击切换）' },
+                  stateKey: 'theme',
+                  items: [
+                    { value: 'Default', label: 'Default', note: { zh: '默认深色' } },
+                    { value: 'Default Light', label: 'Default Light', note: { zh: '默认浅色' } },
+                    { value: 'GitHub', label: 'GitHub' },
+                    { value: 'Atom One', label: 'Atom One Dark' },
+                    { value: 'Ayu', label: 'Ayu' },
+                    { value: 'Dracula', label: 'Dracula' },
+                    { value: 'ANSI', label: 'ANSI', note: { zh: '跟随终端自身的 ANSI 配色' } },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/editor',
+          example: '/editor',
+          en: 'Open a dialog to select your preferred external editor',
+          i18n: { zh: { summary: '选择外部编辑器', detail: '配合长文本编辑等场景使用，支持 VS Code、Vim、Zed 等。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择外部编辑器（展示）' },
+                  items: [
+                    { value: 'vscode', label: 'VS Code', note: { zh: '需要 code 命令在 PATH 里' } },
+                    { value: 'cursor', label: 'Cursor' },
+                    { value: 'vim', label: 'Vim / Neovim' },
+                    { value: 'zed', label: 'Zed' },
+                    { value: 'emacs', label: 'Emacs' },
+                  ],
+                },
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -414,6 +729,37 @@ export const gemini: AgentDef = {
           example: '/auth',
           en: 'Open a dialog to change the authentication method',
           i18n: { zh: { summary: '切换登录/认证方式', detail: '在 Google 账号登录、Gemini API Key、Vertex AI 等认证方式间切换。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择认证方式（展示）' },
+                  items: [
+                    { value: 'oauth', label: 'Login with Google', note: { zh: '个人 Google 账号，含免费额度' } },
+                    { value: 'api-key', label: 'Use Gemini API Key', note: { zh: '走 AI Studio 的 API Key' } },
+                    { value: 'vertex', label: 'Vertex AI', note: { zh: '企业 / GCP 项目' } },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/permissions',
+          argSpec: '[trust]',
+          example: '/permissions trust',
+          en: 'Manage folder trust and permissions',
+          i18n: { zh: { summary: '管理文件夹信任与权限', detail: '/permissions trust 打开当前文件夹的信任设置。启动时也可用 --skip-trust 直接信任。' } },
+        },
+        {
+          kind: 'slash',
+          name: '/policies',
+          argSpec: '[list]',
+          example: '/policies list',
+          en: 'Manage Policy Engine rules that govern tool execution',
+          i18n: { zh: { summary: '管理策略引擎规则（工具执行的允许/拒绝策略）', detail: '策略引擎是 --allowed-tools 的替代方案，规则写在 settings.json 里。' } },
         },
         {
           kind: 'slash',
@@ -471,6 +817,17 @@ export const gemini: AgentDef = {
           example: '/ide status',
           en: 'Manage IDE integration (enable / disable / install / status)',
           i18n: { zh: { summary: '管理 IDE 集成（VS Code 等）', detail: '/ide install 安装 IDE 伴侣插件，让 Gemini 感知编辑器里打开的文件。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '● IDE integration: disconnected', style: 'warn' },
+                  { text: 'Run /ide install inside VS Code to set it up.', style: 'dim', note: { zh: '未检测到 IDE 伴侣插件（/ide status 的仿真输出）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -486,6 +843,23 @@ export const gemini: AgentDef = {
           example: '/vim',
           en: 'Toggle vim mode for the input area (NORMAL and INSERT modes)',
           i18n: { zh: { summary: '输入框启用/关闭 Vim 按键模式', detail: '支持 hjkl 移动、dd/cw 等编辑命令和数字前缀（如 3h、5w）。偏好会存进 settings.json。' } },
+          simulate: {
+            effects: [
+              { type: 'print', lines: [{ text: '✓ Vim mode enabled (INSERT). Run /vim again to disable.', style: 'ok', note: { zh: '开关状态会写入 settings.json，下次启动仍生效' } }] },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/terminal-setup',
+          example: '/terminal-setup',
+          en: 'Configure terminal keybindings for multiline input (Shift+Enter)',
+          i18n: { zh: { summary: '配置终端按键，让 Shift+Enter 能换行', detail: '支持 VS Code、Cursor、Windsurf 等终端；配置后需重启终端生效。' } },
+          simulate: {
+            effects: [
+              { type: 'print', lines: [{ text: '✓ Terminal configured for Shift+Enter newline. Restart your terminal to apply.', style: 'ok', note: { zh: '写入终端键位配置，重启终端后 Shift+Enter 即可换行' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -494,6 +868,45 @@ export const gemini: AgentDef = {
           example: '/bug 输入框卡死',
           en: 'File an issue about Gemini CLI on GitHub',
           i18n: { zh: { summary: '一键去 GitHub 提 bug', detail: '/bug 后面写的文字会成为 issue 标题。' } },
+        },
+        {
+          kind: 'slash',
+          name: '/docs',
+          example: '/docs',
+          en: 'Open the full Gemini CLI documentation in your browser',
+          i18n: { zh: { summary: '在浏览器打开官方文档' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Opening documentation in your browser:', style: 'dim' },
+                  { text: 'https://geminicli.com/docs', style: 'accent', note: { zh: '沙箱等受限环境下会直接打印链接' } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/privacy',
+          example: '/privacy',
+          en: 'Display the privacy notice and data collection consent options',
+          i18n: { zh: { summary: '查看隐私声明，管理数据收集同意项' } },
+        },
+        {
+          kind: 'slash',
+          name: '/setup-github',
+          example: '/setup-github',
+          en: 'Set up GitHub Actions for issue triage and PR review with Gemini',
+          i18n: { zh: { summary: '一键配置 GitHub Actions（issue 分诊 / PR 评审）', detail: '在当前仓库安装官方工作流，让 Gemini 自动处理 issue 和 PR。' } },
+        },
+        {
+          kind: 'slash',
+          name: '/upgrade',
+          example: '/upgrade',
+          en: 'Open the plan upgrade page (requires Google login)',
+          i18n: { zh: { summary: '打开套餐升级页面（需 Google 账号登录）' } },
         },
         {
           kind: 'slash',

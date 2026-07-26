@@ -12,6 +12,27 @@ export const claudeCode: AgentDef = {
     zh: 'Anthropic 官方终端编程助手，直接在命令行里读写代码、执行任务。',
   },
   coverage: 'full',
+  session: {
+    prompt: '>',
+    banner: [
+      { text: '✻ Welcome to Claude Code!', style: 'accent' },
+      { text: 'model: {model} · cwd: ~/my-project', style: 'dim', note: { zh: '当前模型与工作目录' } },
+      { text: 'Type /help for commands, exit to quit', style: 'dim', note: { zh: '输入 /help 查看命令，exit 退出会话' } },
+    ],
+    statusFields: [
+      { key: 'model', label: { zh: '模型' }, initial: 'sonnet', options: ['opus', 'sonnet', 'haiku'] },
+      { key: 'mode', label: { zh: '权限模式' }, initial: 'default', options: ['default', 'acceptEdits', 'plan', 'bypassPermissions'] },
+      { key: 'effort', label: { zh: '思考力度' }, initial: 'high', options: ['low', 'medium', 'high', 'xhigh', 'max'] },
+      { key: 'context', label: { zh: '上下文' }, initial: '2%' },
+    ],
+    chatReply: [
+      { text: '✻ Thinking…', style: 'dim' },
+      {
+        text: 'I will read the relevant files and make the change.',
+        note: { zh: '真实的 Claude Code 会读你的代码、改文件、跑测试并汇报结果' },
+      },
+    ],
+  },
   categories: [
     {
       id: 'cli-flags',
@@ -29,6 +50,7 @@ export const claudeCode: AgentDef = {
               detail: '可以用别名（opus / sonnet / haiku）或完整模型名（如 claude-sonnet-5）。不指定时使用账号默认模型。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { model: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -41,6 +63,17 @@ export const claudeCode: AgentDef = {
               summary: '继续当前目录里最近一次的对话',
               detail: '恢复上下文接着聊，不会新开会话。适合关掉终端后回来继续干活。',
             },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Resuming most recent conversation in ~/my-project…', style: 'dim', note: { zh: '恢复最近一次对话（仿真）' } },
+                ],
+              },
+              { type: 'state', patch: { context: '38%' } },
+            ],
           },
         },
         {
@@ -70,6 +103,17 @@ export const claudeCode: AgentDef = {
               detail: '适合写脚本或管道，比如 git diff | claude -p "帮我写提交信息"。配合 --output-format 可输出 JSON。',
             },
           },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '(model response printed to stdout)', style: 'dim', note: { zh: '结果直接打印到标准输出，随后退出——适合脚本和管道' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'flag',
@@ -83,6 +127,7 @@ export const claudeCode: AgentDef = {
               detail: 'default 每次询问；acceptEdits 自动接受文件编辑；plan 只读规划模式（不改任何东西）；bypassPermissions 跳过所有确认（危险，慎用）。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { mode: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -120,6 +165,12 @@ export const claudeCode: AgentDef = {
               summary: '跳过所有权限确认（危险）',
               detail: '完全自动执行、不再询问。只建议在容器/沙箱等隔离环境里使用。',
             },
+          },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { mode: 'bypassPermissions' } },
+              { type: 'print', lines: [{ text: '⚠ Permission checks are disabled.', style: 'warn', note: { zh: '权限检查已关闭（注意状态栏变化）' } }] },
+            ],
           },
         },
         {
@@ -185,6 +236,7 @@ export const claudeCode: AgentDef = {
               detail: '力度越高越深思熟虑但更慢更贵。会话中可用 /effort 调整。',
             },
           },
+          simulate: { effects: [{ type: 'state', patch: { effort: '{arg}' } }] },
         },
         {
           kind: 'flag',
@@ -193,6 +245,10 @@ export const claudeCode: AgentDef = {
           example: 'claude --version',
           en: 'Print the version number',
           i18n: { zh: { summary: '查看版本号' } },
+          simulate: {
+            preventSession: true,
+            effects: [{ type: 'print', lines: [{ text: '2.1.220 (Claude Code)', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+          },
         },
         {
           kind: 'flag',
@@ -218,6 +274,18 @@ export const claudeCode: AgentDef = {
               summary: '管理 MCP 服务器（添加/列出/删除）',
               detail: '例如 claude mcp add 交互式添加、claude mcp list 查看已配置的服务器。',
             },
+          },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'No MCP servers configured.', style: 'dim' },
+                  { text: 'Run `claude mcp add` to add one.', style: 'dim', note: { zh: '还没有配置 MCP 服务器；用 claude mcp add 添加' } },
+                ],
+              },
+            ],
           },
         },
         {
@@ -245,6 +313,10 @@ export const claudeCode: AgentDef = {
           example: 'claude update',
           en: 'Check for and install updates',
           i18n: { zh: { summary: '检查并安装更新' } },
+          simulate: {
+            preventSession: true,
+            effects: [{ type: 'print', lines: [{ text: '✓ Claude Code is up to date (v2.1.220)', style: 'ok', note: { zh: '已是最新版本' } }] }],
+          },
         },
         {
           kind: 'subcommand',
@@ -252,6 +324,19 @@ export const claudeCode: AgentDef = {
           example: 'claude doctor',
           en: 'Print read-only installation diagnostics without starting a session',
           i18n: { zh: { summary: '诊断安装与环境问题（只读，不开会话）', detail: '安装出问题、命令找不到时先跑它。会话内的 /doctor 功能更全，还能自动修复。' } },
+          simulate: {
+            preventSession: true,
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '✓ Installation: npm global (v2.1.220)', style: 'ok' },
+                  { text: '✓ PATH: /usr/local/bin/claude', style: 'ok' },
+                  { text: '✓ Settings files parse OK', style: 'ok', note: { zh: '逐项体检安装环境（仿真输出）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'subcommand',
@@ -370,6 +455,13 @@ export const claudeCode: AgentDef = {
           example: '/clear',
           en: 'Start a new conversation with empty context; pass a name to label the previous one',
           i18n: { zh: { summary: '清空上下文开新对话', detail: '想在同一对话里省上下文用 /compact；旧对话可用 /resume 找回。' } },
+          simulate: {
+            effects: [
+              { type: 'clear' },
+              { type: 'state', patch: { context: '0%' } },
+              { type: 'print', lines: [{ text: 'Started a new conversation.', style: 'dim', note: { zh: '屏幕已清空，上下文归零（看状态栏）' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -394,6 +486,12 @@ export const claudeCode: AgentDef = {
           example: '/compact',
           en: 'Free up context by summarizing the conversation so far',
           i18n: { zh: { summary: '压缩对话：保留摘要、释放上下文空间', detail: '可附加说明告诉它保留什么，如 /compact 保留所有代码改动。' } },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { context: '1%' } },
+              { type: 'compact', summary: { zh: '此前的对话已折叠为摘要，上下文占用大幅下降（看状态栏）' } },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -411,6 +509,19 @@ export const claudeCode: AgentDef = {
           example: '/context',
           en: 'Visualize current context usage as a colored grid with optimization suggestions',
           i18n: { zh: { summary: '可视化查看上下文占用，附优化建议' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '▓▓░░░░░░░░░░░░░░░░░░  {context} used', style: 'accent', note: { zh: '上下文窗口占用示意' } },
+                  { text: 'System prompt  1.2%', style: 'dim' },
+                  { text: 'Messages       0.8%', style: 'dim' },
+                  { text: 'Free space     98%', style: 'dim', note: { zh: '各部分占用明细（仿真）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -466,6 +577,18 @@ export const claudeCode: AgentDef = {
           example: '/diff',
           en: 'Open an interactive diff viewer showing uncommitted changes and per-turn diffs',
           i18n: { zh: { summary: '交互式查看代码改动（未提交 + 每轮的 diff）', detail: '左右键切换视角，上下键选文件，Enter 打开。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'src/auth.ts        +12 −3', style: 'accent', note: { zh: '每个文件的增删行数' } },
+                  { text: '+ export function refreshToken() {', style: 'ok' },
+                  { text: '−   throw new Error("TODO")', style: 'warn', note: { zh: '绿色为新增、红色为删除（仿真片段）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -474,6 +597,18 @@ export const claudeCode: AgentDef = {
           example: '/doctor',
           en: '[Skill] Run a setup checkup that diagnoses issues and can fix them (installation, PATH, unused skills/MCP, slow hooks…)',
           i18n: { zh: { summary: '全面体检并可自动修复（技能）', detail: '检查安装健康、清理没用的技能和 MCP、精简 CLAUDE.md 等，改动前会先确认。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '✓ Installation healthy (v2.1.220)', style: 'ok' },
+                  { text: '✓ No unused MCP servers', style: 'ok' },
+                  { text: '! CLAUDE.md could be trimmed by ~40%', style: 'warn', note: { zh: '发现可精简项，真实 CLI 会询问后修复' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -482,6 +617,28 @@ export const claudeCode: AgentDef = {
           example: '/effort high',
           en: 'Set the model effort level: low / medium / high / xhigh / max, or auto to reset',
           i18n: { zh: { summary: '调整模型思考力度', detail: '不带参数打开交互滑块；立即生效，不用等当前回复结束。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择思考力度（点击切换）' },
+                  stateKey: 'effort',
+                  items: [
+                    { value: 'low', label: 'low', note: { zh: '最快最省' } },
+                    { value: 'medium', label: 'medium', note: { zh: '均衡' } },
+                    { value: 'high', label: 'high', note: { zh: '默认，深思熟虑' } },
+                    { value: 'xhigh', label: 'xhigh', note: { zh: '更强推理' } },
+                    { value: 'max', label: 'max', note: { zh: '最强（仅本会话）' } },
+                  ],
+                },
+              },
+            ],
+            argEffects: [
+              { type: 'state', patch: { effort: '{arg}' } },
+              { type: 'print', lines: [{ text: '✓ Effort set to {effort}', style: 'ok', note: { zh: '思考力度已调整' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -498,6 +655,9 @@ export const claudeCode: AgentDef = {
           example: '/export',
           en: 'Export the current conversation as plain text to clipboard or a file',
           i18n: { zh: { summary: '导出当前对话到文件/剪贴板' } },
+          simulate: {
+            effects: [{ type: 'print', lines: [{ text: '✓ Conversation exported to conversation-2026-07-27.txt', style: 'ok', note: { zh: '对话已导出为文本文件（仿真）' } }] }],
+          },
         },
         {
           kind: 'slash',
@@ -506,6 +666,10 @@ export const claudeCode: AgentDef = {
           example: '/fast on',
           en: 'Toggle fast mode on or off (Opus with faster output)',
           i18n: { zh: { summary: '开关快速模式', detail: '快速模式用的还是 Opus，只是输出更快，不是降级到小模型。' } },
+          simulate: {
+            effects: [{ type: 'print', lines: [{ text: 'Fast mode is off. Use /fast on to enable.', style: 'dim', note: { zh: '当前未开启快速模式' } }] }],
+            argEffects: [{ type: 'print', lines: [{ text: '✓ Fast mode {arg}', style: 'ok', note: { zh: '快速模式开关已切换（仿真）' } }] }],
+          },
         },
         {
           kind: 'slash',
@@ -579,6 +743,17 @@ export const claudeCode: AgentDef = {
           example: '/init',
           en: 'Initialize project with a CLAUDE.md guide',
           i18n: { zh: { summary: '为当前代码库生成 CLAUDE.md 项目说明', detail: 'CLAUDE.md 是项目级记忆文件，每次会话自动加载，写入构建命令、代码规范等。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Analyzing codebase…', style: 'dim' },
+                  { text: '✓ Created CLAUDE.md (build commands, code style, test setup)', style: 'ok', note: { zh: '已生成项目说明文件（仿真）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -614,6 +789,17 @@ export const claudeCode: AgentDef = {
           example: '/login',
           en: 'Sign in to your Anthropic account',
           i18n: { zh: { summary: '登录 Anthropic 账号' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Opening browser for OAuth sign-in…', style: 'dim', note: { zh: '真实 CLI 会打开浏览器完成登录' } },
+                  { text: '✓ Signed in as you@example.com', style: 'ok', note: { zh: '登录成功（仿真）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -638,6 +824,17 @@ export const claudeCode: AgentDef = {
           example: '/mcp',
           en: 'Manage MCP server connections and OAuth authentication',
           i18n: { zh: { summary: '管理 MCP 服务器连接与登录', detail: '可以单独重连、启用或禁用某个服务器。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'github    ✓ connected', style: 'ok', note: { zh: '已连接的 MCP 服务器' } },
+                  { text: 'postgres  ○ disconnected', style: 'dim', note: { zh: '未连接；真实 CLI 里可选中重连' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -645,6 +842,18 @@ export const claudeCode: AgentDef = {
           example: '/memory',
           en: 'Edit CLAUDE.md memory files, enable/disable auto-memory, and view auto-memory entries',
           i18n: { zh: { summary: '编辑记忆文件、管理自动记忆' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '1. Project  ./CLAUDE.md (24 lines)', note: { zh: '项目级记忆：随仓库提交，团队共享' } },
+                  { text: '2. User     ~/.claude/CLAUDE.md (8 lines)', note: { zh: '个人级记忆：只对你生效' } },
+                  { text: 'Auto-memory: on', style: 'dim' },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -661,6 +870,26 @@ export const claudeCode: AgentDef = {
           example: '/model',
           en: 'Switch the AI model and save it as your default for new sessions',
           i18n: { zh: { summary: '切换模型并存为默认', detail: '选择器里按 s 可以只对当前会话生效；支持的模型还能用左右键调思考力度。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择模型（点击切换，状态栏会跟着变）' },
+                  stateKey: 'model',
+                  items: [
+                    { value: 'opus', label: 'claude-opus-5', note: { zh: '最强推理，适合复杂任务' } },
+                    { value: 'sonnet', label: 'claude-sonnet-5', note: { zh: '日常编码的均衡之选' } },
+                    { value: 'haiku', label: 'claude-haiku-4-5', note: { zh: '最快最省，适合轻量任务' } },
+                  ],
+                },
+              },
+            ],
+            argEffects: [
+              { type: 'state', patch: { model: '{arg}' } },
+              { type: 'print', lines: [{ text: '✓ Switched to {model}', style: 'ok', note: { zh: '已切换模型，注意底部状态栏' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -669,6 +898,19 @@ export const claudeCode: AgentDef = {
           example: '/permissions',
           en: 'Configure approval rules for file access, tool execution, and other sensitive operations',
           i18n: { zh: { summary: '配置权限规则（按类别/工具/命令/文件模式）' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Allow rules:', style: 'accent' },
+                  { text: '  Bash(git *)        allow', style: 'ok', note: { zh: '所有 git 命令免确认' } },
+                  { text: '  Edit               ask', note: { zh: '文件编辑需确认' } },
+                  { text: '  WebFetch           deny', style: 'warn', note: { zh: '禁止网络请求（示例规则）' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -676,6 +918,12 @@ export const claudeCode: AgentDef = {
           example: '/plan',
           en: 'Switch into plan mode, where Claude proposes a detailed plan before making changes',
           i18n: { zh: { summary: '进入规划模式：先给详细方案再动手', detail: '大重构或不熟的代码库强烈建议先规划。Shift+Tab 也能切换。' } },
+          simulate: {
+            effects: [
+              { type: 'state', patch: { mode: 'plan' } },
+              { type: 'print', lines: [{ text: '⏸ Plan mode on — Claude will propose a plan before editing.', style: 'ok', note: { zh: '规划模式已开启：只读不改，先出方案（看状态栏）' } }] },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -747,6 +995,21 @@ export const claudeCode: AgentDef = {
           example: '/resume',
           en: 'Return to an earlier conversation via a picker, or jump directly by name',
           i18n: { zh: { summary: '挑选并恢复历史会话' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '历史会话（仿真列表，真实 CLI 里可回车选择）' },
+                  items: [
+                    { value: '1', label: '2h ago · fix login bug (12 messages)', note: { zh: '2 小时前：修登录 bug' } },
+                    { value: '2', label: 'yesterday · add dark mode (34 messages)', note: { zh: '昨天：加深色模式' } },
+                    { value: '3', label: '3d ago · refactor api client (8 messages)', note: { zh: '3 天前：重构 API 客户端' } },
+                  ],
+                },
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -755,6 +1018,21 @@ export const claudeCode: AgentDef = {
           example: '/rewind',
           en: 'Roll code and conversation back to a checkpoint, or summarize part of the conversation',
           i18n: { zh: { summary: '回退代码和对话到检查点', detail: '改崩了可以整体回滚。双击 Esc 也能打开回退面板。' } },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '检查点（仿真：真实 CLI 里回车回退、按 s 生成摘要）' },
+                  items: [
+                    { value: '1', label: '5 min ago · before "refactor auth"', note: { zh: '5 分钟前：重构 auth 之前' } },
+                    { value: '2', label: '20 min ago · before "add tests"', note: { zh: '20 分钟前：加测试之前' } },
+                    { value: '3', label: 'session start', note: { zh: '会话开始' } },
+                  ],
+                },
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -847,6 +1125,20 @@ export const claudeCode: AgentDef = {
           example: '/status',
           en: 'Show current model, effort level, context usage, and background tasks',
           i18n: { zh: { summary: '查看模型、思考力度、上下文和后台任务状态' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Model:            {model}', note: { zh: '当前模型' } },
+                  { text: 'Permission mode:  {mode}', note: { zh: '权限模式' } },
+                  { text: 'Effort:           {effort}', note: { zh: '思考力度' } },
+                  { text: 'Context used:     {context}', note: { zh: '上下文占用' } },
+                  { text: 'Background tasks: none', style: 'dim' },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -869,6 +1161,17 @@ export const claudeCode: AgentDef = {
           example: '/tasks',
           en: 'Show all background work in the current session, including subagents and scheduled tasks',
           i18n: { zh: { summary: '查看本会话所有后台工作' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: '● subagent  research-docs   running (2m)', style: 'accent', note: { zh: '一个正在跑的子代理（仿真）' } },
+                  { text: '✓ bash      npm test        done', style: 'ok', note: { zh: '已完成的后台命令' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
@@ -927,6 +1230,9 @@ export const claudeCode: AgentDef = {
           example: '/undo',
           en: 'Undo the last code change made by Claude in the current session',
           i18n: { zh: { summary: '撤销 Claude 上一次代码改动' } },
+          simulate: {
+            effects: [{ type: 'print', lines: [{ text: '✓ Reverted last change (src/auth.ts)', style: 'ok', note: { zh: '上一次改动已撤销（仿真）' } }] }],
+          },
         },
         {
           kind: 'slash',
@@ -942,6 +1248,17 @@ export const claudeCode: AgentDef = {
           example: '/usage',
           en: 'Show API usage, token counts, and costs for the current session and account period',
           i18n: { zh: { summary: '查看用量、token 数和费用' } },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Session:  128.4k tokens · $0.42', note: { zh: '本次会话的 token 与费用（仿真数字）' } },
+                  { text: 'This week: 2.1M tokens · 34% of plan limit', note: { zh: '本周用量占套餐限额比例' } },
+                ],
+              },
+            ],
+          },
         },
         {
           kind: 'slash',

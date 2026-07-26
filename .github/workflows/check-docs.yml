@@ -1,0 +1,64 @@
+name: Check official docs for updates
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # 每周一 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      summary: ${{ steps.check.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: check
+        run: node scripts/check-docs.mjs || true
+
+  auto-update:
+    needs: detect
+    if: needs.detect.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: has-key
+        run: echo "ok=${{ secrets.ANTHROPIC_API_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
+      # 配置了 ANTHROPIC_API_KEY：让 Claude 自动更新数据并开 PR
+      - name: Update data with Claude
+        if: steps.has-key.outputs.ok == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            以下官方文档页面自上次快照后发生了变化：
+            ${{ needs.detect.outputs.summary }}
+
+            请逐个抓取这些页面的最新内容，对照更新 src/data/ 下对应 agent 的数据文件：
+            - 补充新命令、删除已下线命令、修正描述；保持 schema（src/data/types.ts）与既有翻译风格（中文摘要人工质感，en 保留官方原文）
+            - 高频新命令按 claude-code.ts 的样板补 simulate 模拟规格
+            - 运行 `node scripts/check-docs.mjs --update` 刷新快照
+            - 运行 `npm ci && npm test` 确保通过
+            完成后创建分支并开 PR，标题注明"docs-sync"，正文列出每个 agent 的变化点。
+          claude_args: '--allowedTools "Bash,Read,Edit,Write,WebFetch,WebSearch"'
+
+      # 未配置 key：开 issue 提醒手动更新
+      - name: Open reminder issue
+        if: steps.has-key.outputs.ok == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "官方文档有更新，命令数据需要核对（$(date +%Y-%m-%d)）" \
+            --body "$(printf '自动检测发现以下官方文档页面发生变化：\n\n%s\n\n请核对并更新 src/data/ 对应数据文件，然后运行 `node scripts/check-docs.mjs --update` 刷新快照。\n\n提示：在仓库 Settings → Secrets 配置 ANTHROPIC_API_KEY 后，此工作流会自动完成更新并开 PR。' "${{ needs.detect.outputs.summary }}")"

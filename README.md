@@ -3,6 +3,7 @@
 一个纯静态网页，帮助非英语母语的开发者快速上手各类 AI Agent CLI：
 
 - 🖥️ **模拟终端**：直接在网页里敲命令（如 `claude --model opus`、`/compact`），实时逐词显示中文解读
+- 🎮 **仿真会话**：敲 `claude` 回车真的会"进入"仿真会话——欢迎横幅、会话提示符、底部状态栏；`/model opus` 真的切模型、`/clear` 真的清屏、`/compact` 把历史折叠成摘要，边玩边理解每个命令的实际效果
 - 📖 **命令菜单树**：侧边栏按「CLI 选项 / 子命令 / 斜杠命令 / 快捷键」分类浏览，点击即插入终端
 - 🔍 **全局搜索**：按命令名、英文原文或中文含义跨工具搜索
 - ⌨️ **自动补全**：Tab 补全、↑↓ 历史、`--help` 输出整份翻译版帮助菜单
@@ -29,6 +30,15 @@ npm run dev      # 本地开发
 npm run test     # 解析器单元测试
 npm run build    # 产出静态文件到 dist/
 ```
+
+## 官方文档变化自动跟进
+
+`.github/workflows/check-docs.yml` 每周一自动抓取 `scripts/doc-sources.json` 里各 CLI 的官方文档页，与 `docs-snapshots/` 里的快照对比：
+
+- **默认（免费）**：发现变化时自动开 issue，列出变动的页面
+- **全自动模式**：在仓库 Settings → Secrets and variables → Actions 里配置 `ANTHROPIC_API_KEY` 后，发现变化会直接让 Claude 抓取新文档、更新数据文件并开 PR 供你审核（有 API 调用费用）
+
+手动触发：Actions 页面选 "Check official docs for updates" → Run workflow。更新数据后运行 `node scripts/check-docs.mjs --update` 刷新快照基线。
 
 ## 数据贡献
 
