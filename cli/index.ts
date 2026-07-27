@@ -10,9 +10,15 @@ import {
   formatRootHelp,
   parseCliArgs,
 } from './core';
-import { detectBinary, runPassthrough } from './runtime';
+import { CODEX_TUI_VERIFIED_VERSION, codexTerminalRules } from './adapters/codex';
+import {
+  canRunMacOsTuiProxy,
+  detectBinary,
+  runMacOsLocalizedTui,
+  runPassthrough,
+} from './runtime';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 async function main() {
   let options;
@@ -95,8 +101,20 @@ async function main() {
       process.exitCode = 127;
       return;
     }
+
+    if (agent.id === 'codex' && options.forwardedArgs.length === 0 && canRunMacOsTuiProxy()) {
+      const verified = status.version?.includes(CODEX_TUI_VERIFIED_VERSION);
+      console.error(
+        `[AgentL10n] Codex 中文 TUI 预览`
+        + ` · ${verified ? `已验证 ${CODEX_TUI_VERIFIED_VERSION}` : `兼容匹配（基准 ${CODEX_TUI_VERIFIED_VERSION}）`}`,
+      );
+      console.error('[AgentL10n] 按 / 查看中文菜单；仅替换已知界面短语，--passthrough 可关闭。\n');
+      process.exitCode = await runMacOsLocalizedTui(agent.binary, options.forwardedArgs, codexTerminalRules);
+      return;
+    }
+
     console.error(`[AgentL10n] ${agent.name} ${status.version ?? ''} · 安全透传模式`);
-    console.error('[AgentL10n] 当前 MVP 不修改真实 TUI；使用 Ctrl+Shift+L 的原位注释将在下一阶段实现。\n');
+    console.error('[AgentL10n] 当前运行方式不支持 TUI 原位翻译，已自动降级为官方输出。\n');
   }
 
   process.exitCode = await runPassthrough(agent.binary, options.forwardedArgs);

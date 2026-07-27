@@ -1,6 +1,6 @@
 {
   "name": "@agent-l10n/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Unofficial local-first localization layer for agent CLIs",
   "type": "module",
   "license": "MIT",

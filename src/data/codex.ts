@@ -16,7 +16,7 @@ export const codex: AgentDef = {
     prompt: '›',
     banner: [
       { text: '╭──────────────────────────────────────────────╮', style: 'dim' },
-      { text: '│  >_ OpenAI Codex (v0.87.0)                   │', style: 'accent', note: { zh: 'Codex 启动横幅（仿真版本号）' } },
+      { text: '│  >_ OpenAI Codex (v0.146.0-alpha.3.1)        │', style: 'accent', note: { zh: '本机实测版本（2026-07-27）' } },
       { text: '╰──────────────────────────────────────────────╯', style: 'dim' },
       { text: 'model:      {model} {effort} · /model to change', style: 'dim', note: { zh: '当前模型与推理力度' } },
       { text: 'directory:  ~/my-project', style: 'dim' },
@@ -284,7 +284,7 @@ export const codex: AgentDef = {
           i18n: { zh: { summary: '查看版本号' } },
           simulate: {
             preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: 'codex-cli 0.87.0', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+            effects: [{ type: 'print', lines: [{ text: 'codex-cli 0.146.0-alpha.3.1', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
           },
         },
         {
@@ -572,7 +572,7 @@ export const codex: AgentDef = {
           simulate: {
             preventSession: true,
             effects: [
-              { type: 'print', lines: [{ text: '✓ Codex CLI is up to date (0.87.0)', style: 'ok', note: { zh: '已是最新版本' } }] },
+              { type: 'print', lines: [{ text: '✓ Codex CLI is up to date (0.146.0-alpha.3.1)', style: 'ok', note: { zh: '已是当前实测版本' } }] },
             ],
           },
         },
@@ -593,7 +593,7 @@ export const codex: AgentDef = {
               {
                 type: 'print',
                 lines: [
-                  { text: '✓ Installation: codex 0.87.0 (npm)', style: 'ok' },
+                  { text: '✓ Installation: codex 0.146.0-alpha.3.1', style: 'ok' },
                   { text: '✓ Auth: signed in with ChatGPT (Plus)', style: 'ok' },
                   { text: '✓ Config: ~/.codex/config.toml parsed OK', style: 'ok' },
                   { text: '! Sandbox: seatbelt profile outdated, run codex update', style: 'warn', note: { zh: '发现问题会给出修复建议' } },
@@ -1445,3 +1445,46 @@ export const codex: AgentDef = {
     },
   ],
 };
+
+/**
+ * 源码枚举会同时包含隐藏、实验、平台限定与兼容命令，不能等同于用户按 `/`
+ * 看到的菜单。这里按 0.146.0-alpha.3.1 的实机输出拆层，同时保留完整参考集。
+ */
+const currentCodexMenu = [
+  '/model',
+  '/fast',
+  '/ide',
+  '/permissions',
+  '/keymap',
+  '/vim',
+  '/experimental',
+  '/approve',
+];
+
+const slashCategoryIndex = codex.categories.findIndex((category) => category.id === 'slash-commands');
+const slashCategory = codex.categories[slashCategoryIndex];
+
+if (slashCategory) {
+  const byName = new Map(slashCategory.entries.map((entry) => [entry.name, entry]));
+  const currentEntries = currentCodexMenu.flatMap((name) => {
+    const entry = byName.get(name);
+    return entry ? [entry] : [];
+  });
+  const currentNames = new Set(currentCodexMenu);
+  const referenceEntries = slashCategory.entries.filter((entry) => !currentNames.has(entry.name));
+
+  codex.categories.splice(
+    slashCategoryIndex,
+    1,
+    {
+      id: 'slash-current-menu',
+      i18n: { zh: { title: '当前实机 / 菜单（0.146.0-alpha.3.1）' } },
+      entries: currentEntries,
+    },
+    {
+      id: 'slash-versioned-reference',
+      i18n: { zh: { title: '其他斜杠命令（版本 / 平台 / 功能条件相关）' } },
+      entries: referenceEntries,
+    },
+  );
+}

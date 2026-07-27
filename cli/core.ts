@@ -143,7 +143,7 @@ export function formatRootHelp(agents: AgentDef[]): string {
     '',
     '选项：',
     '  --locale zh-CN        界面语言',
-    '  --mode annotate       中英注释模式（当前用于帮助和解释）',
+    '  --mode annotate       中英注释模式（macOS Codex 支持原位菜单翻译）',
     '  --mode passthrough    完全透传，不修改官方 CLI 输出',
     '  --passthrough         passthrough 的快捷写法',
     '',
@@ -156,4 +156,3 @@ export function formatRootHelp(agents: AgentDef[]): string {
     '  agent-l10n codex',
   ].join('\n');
 }
-

@@ -85,4 +85,19 @@ describe('命令数据完整性', () => {
       expect(visibleEntries.has(command), `Codex 侧边栏缺少源码命令/别名 ${command}`).toBe(true);
     }
   });
+
+  it('Codex 当前实机菜单与 0.146.0-alpha.3.1 输出一致', () => {
+    const codex = agents.find((agent) => agent.id === 'codex');
+    const currentMenu = codex?.categories.find((category) => category.id === 'slash-current-menu');
+    expect(currentMenu?.entries.map((entry) => entry.name)).toEqual([
+      '/model',
+      '/fast',
+      '/ide',
+      '/permissions',
+      '/keymap',
+      '/vim',
+      '/experimental',
+      '/approve',
+    ]);
+  });
 });
