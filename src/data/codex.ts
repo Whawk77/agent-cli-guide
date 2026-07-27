@@ -955,18 +955,40 @@ export const codex: AgentDef = {
         {
           kind: 'slash',
           name: '/agent',
-          aliases: ['/subagents'],
           example: '/agent',
           en: 'Switch the active agent thread',
           i18n: { zh: { summary: '切换当前活跃的 agent 线程（子代理）' } },
         },
         {
           kind: 'slash',
+          name: '/subagents',
+          example: '/subagents',
+          en: 'Switch the active agent thread',
+          i18n: {
+            zh: {
+              summary: '查看并切换当前活跃的子代理线程',
+              detail: '与 /agent 功能相同；源码将两者作为独立可见命令收录。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
           name: '/btw',
-          aliases: ['/side'],
           example: '/btw 顺便问下这个报错是啥意思',
           en: 'Start an ephemeral side chat without touching the main thread',
           i18n: { zh: { summary: '开一个临时侧聊，不影响主对话上下文' } },
+        },
+        {
+          kind: 'slash',
+          name: '/side',
+          example: '/side 解释一下刚才的错误',
+          en: 'Start an ephemeral side chat without touching the main thread',
+          i18n: {
+            zh: {
+              summary: '开启临时侧聊，不写入主对话记录',
+              detail: '与 /btw 功能相同；侧聊结束后可继续原来的主任务。',
+            },
+          },
         },
         {
           kind: 'slash',
@@ -1104,9 +1126,22 @@ export const codex: AgentDef = {
         {
           kind: 'slash',
           name: '/stop',
+          aliases: ['/clean'],
           example: '/stop',
           en: 'Cancel background work',
           i18n: { zh: { summary: '停止后台运行的命令/任务' } },
+        },
+        {
+          kind: 'slash',
+          name: '/clean',
+          example: '/clean',
+          en: 'Stop all background terminals',
+          i18n: {
+            zh: {
+              summary: '停止所有后台终端（/stop 的源码别名）',
+              detail: '这是源码保留的兼容别名；日常使用建议优先输入 /stop。',
+            },
+          },
         },
         {
           kind: 'slash',
@@ -1208,7 +1243,6 @@ export const codex: AgentDef = {
         {
           kind: 'slash',
           name: '/pets',
-          aliases: ['/pet'],
           example: '/pets',
           en: 'Choose or hide a terminal pet',
           i18n: {
@@ -1235,11 +1269,92 @@ export const codex: AgentDef = {
         },
         {
           kind: 'slash',
+          name: '/pet',
+          example: '/pet',
+          en: 'Choose or hide a terminal pet',
+          i18n: {
+            zh: {
+              summary: '选择或隐藏终端宠物（/pets 的单数别名）',
+              detail: '源码解析器同时接受 /pet 和 /pets。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/debug-m-drop',
+          example: '/debug-m-drop',
+          en: 'Internal memory debugging command — do not use',
+          i18n: {
+            zh: {
+              summary: '内部记忆调试命令（不要在正常会话中使用）',
+              detail: '该命令存在于最新源码的发布命令枚举中，但源码描述明确标注“DO NOT USE”。本站仅为完整性收录。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/debug-m-update',
+          example: '/debug-m-update',
+          en: 'Internal memory debugging command — do not use',
+          i18n: {
+            zh: {
+              summary: '内部记忆更新调试命令（不要在正常会话中使用）',
+              detail: '该命令存在于最新源码的发布命令枚举中，但源码描述明确标注“DO NOT USE”。本站仅为完整性收录。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/rollout',
+          example: '/rollout',
+          en: 'Print the rollout file path in debug builds',
+          i18n: {
+            zh: {
+              summary: '输出 rollout 文件路径（仅调试构建可见）',
+              detail: '正式发行版通常不会显示；源码通过 debug_assertions 条件控制。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/test-approval',
+          example: '/test-approval',
+          en: 'Test an approval request in debug builds',
+          i18n: {
+            zh: {
+              summary: '测试审批请求（仅调试构建可见）',
+              detail: '供 Codex 开发调试使用，正式发行版通常不会显示。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
           name: '/exit',
-          aliases: ['/quit'],
           example: '/exit',
           en: 'Exit the Codex CLI',
           i18n: { zh: { summary: '退出 Codex CLI' } },
+          simulate: {
+            effects: [
+              {
+                type: 'exitSession',
+                lines: [
+                  { text: 'Session saved. Resume anytime with codex resume --last.', style: 'dim', note: { zh: '会话已保存，可用 codex resume --last 恢复' } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/quit',
+          example: '/quit',
+          en: 'Exit the Codex CLI',
+          i18n: {
+            zh: {
+              summary: '退出 Codex CLI（与 /exit 相同）',
+              detail: '源码将 /quit 和 /exit 作为两个独立可见命令。',
+            },
+          },
           simulate: {
             effects: [
               {

@@ -10,6 +10,10 @@ describe('命令数据完整性', () => {
     '/personality', '/ps', '/stop', '/fork', '/app', '/btw', '/raw', '/resume', '/new', '/review',
     '/status', '/usage', '/debug-config', '/statusline', '/title', '/theme', '/pets',
   ];
+  const codexSourceOnlyOrAliasCommands = [
+    '/subagents', '/side', '/quit', '/pet', '/clean',
+    '/debug-m-drop', '/debug-m-update', '/rollout', '/test-approval',
+  ];
 
   it('收录了 7 个 agent，id 与 binary 唯一', () => {
     expect(agents.length).toBe(7);
@@ -71,14 +75,14 @@ describe('命令数据完整性', () => {
     const slashEntries = codex!.categories
       .flatMap((category) => category.entries)
       .filter((entry) => entry.kind === 'slash');
+    const visibleEntries = new Set(slashEntries.map((entry) => entry.name));
     const available = new Set(slashEntries.flatMap((entry) => [entry.name, ...(entry.aliases ?? [])]));
 
     for (const command of codexOfficialSlashCommands) {
       expect(available.has(command), `Codex 缺少官方命令 ${command}`).toBe(true);
     }
-    expect(available.has('/subagents')).toBe(true);
-    expect(available.has('/side')).toBe(true);
-    expect(available.has('/quit')).toBe(true);
-    expect(available.has('/pet')).toBe(true);
+    for (const command of codexSourceOnlyOrAliasCommands) {
+      expect(visibleEntries.has(command), `Codex 侧边栏缺少源码命令/别名 ${command}`).toBe(true);
+    }
   });
 });
