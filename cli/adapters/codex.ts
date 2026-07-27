@@ -22,6 +22,14 @@ const menuRules: TerminalTranslationRule[] = [
     target: '引入 IDE 当前选区、打开文件及其他上下文',
   },
   {
+    source: 'include current selection, open files, and other context from',
+    target: '引入当前选区、打开文件及其他上下文',
+    followup: {
+      source: 'your IDE',
+      target: '来自 IDE',
+    },
+  },
+  {
     source: 'choose what Codex is allowed to do',
     target: '设置 Codex 可执行的操作与权限',
   },

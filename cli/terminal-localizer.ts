@@ -3,6 +3,8 @@ import { StringDecoder } from 'node:string_decoder';
 export interface TerminalTranslationRule {
   source: string;
   target: string;
+  /** TUI 把一句话折成两行时，仅在前段命中后才允许替换的后段 */
+  followup?: TerminalTranslationRule;
 }
 
 function isCombining(codePoint: number): boolean {
@@ -67,6 +69,7 @@ export function fixedWidthRules(rules: TerminalTranslationRule[]): TerminalTrans
   return rules.map((rule) => ({
     source: rule.source,
     target: fitToTerminalWidth(rule.target, terminalWidth(rule.source)),
+    followup: rule.followup ? fixedWidthRules([rule.followup])[0] : undefined,
   }));
 }
 
@@ -77,6 +80,7 @@ export function fixedWidthRules(rules: TerminalTranslationRule[]): TerminalTrans
 export class StreamingTerminalLocalizer {
   private readonly decoder = new StringDecoder('utf8');
   private pending = '';
+  private followup?: { rule: TerminalTranslationRule; budget: number };
 
   constructor(private readonly rules: TerminalTranslationRule[]) {}
 
@@ -106,14 +110,33 @@ export class StreamingTerminalLocalizer {
   private replaceCompleteRules(input: string): string {
     let output = input;
     for (const rule of this.rules) {
+      if (!output.includes(rule.source)) continue;
       output = output.split(rule.source).join(rule.target);
+      if (rule.followup) {
+        this.followup = { rule: rule.followup, budget: 4_096 };
+      }
+    }
+
+    if (this.followup) {
+      const { rule } = this.followup;
+      const index = output.indexOf(rule.source);
+      if (index >= 0) {
+        output = `${output.slice(0, index)}${rule.target}${output.slice(index + rule.source.length)}`;
+        this.followup = undefined;
+      } else {
+        this.followup.budget -= output.length;
+        if (this.followup.budget <= 0) this.followup = undefined;
+      }
     }
     return output;
   }
 
   private longestRulePrefixSuffix(input: string): number {
     let longest = 0;
-    for (const rule of this.rules) {
+    const candidates = this.followup
+      ? [...this.rules, this.followup.rule]
+      : this.rules;
+    for (const rule of candidates) {
       const maxLength = Math.min(input.length, rule.source.length - 1);
       for (let length = maxLength; length > longest; length -= 1) {
         if (input.endsWith(rule.source.slice(0, length))) {
