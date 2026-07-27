@@ -31,6 +31,49 @@ npm run test     # 解析器单元测试
 npm run build    # 产出静态文件到 dist/
 ```
 
+## AgentL10n 本地化层（MVP）
+
+仓库现在包含一个可运行的真实 CLI 包装器。它与网页共用同一份命令目录和中文翻译，不修改或重新分发官方 CLI。
+
+### 本地安装
+
+```bash
+npm install
+npm run build:cli
+cd packages/cli
+npm link
+```
+
+安装完成后：
+
+```bash
+# 中英双语 Codex 命令帮助
+agent-l10n codex --help
+
+# 解释单个命令；省略 agent 时默认使用 Codex
+agent-l10n explain /permissions
+agent-l10n explain claude /model
+
+# 启动真实官方 CLI，参数、输入、输出和退出码原样透传
+agent-l10n codex
+agent-l10n --passthrough codex --version
+
+# 查看本机安装了哪些官方 CLI
+agent-l10n doctor
+```
+
+当前 MVP 采用安全透传模式：双语帮助和命令解释已经可用，真实交互式 TUI 暂不替换原文。下一阶段会加入基于 PTY 的旁注层，优先覆盖 Codex 的 `/model`、`/permissions` 和 `/status`。
+
+### 安全原则
+
+- 官方命令和参数原样传递，不自动翻译成中文命令。
+- 不修改官方 CLI 文件，不保存登录凭据。
+- 不上传终端内容，不启用遥测。
+- 未安装官方 CLI 时只显示安装提示，不替用户自动安装。
+- 包装器异常时可以随时用 `--passthrough` 完全透传。
+
+更完整的架构和贡献约定见 [本地化层设计](docs/localization-layer.md)。
+
 ## 官方文档变化自动跟进
 
 `.github/workflows/check-docs.yml` 每周一自动抓取 `scripts/doc-sources.json` 里各 CLI 的官方文档页，与 `docs-snapshots/` 里的快照对比：

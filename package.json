@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:web && npm run build:cli",
+    "build:web": "tsc && vite build",
+    "build:cli": "node scripts/build-cli.mjs",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run --exclude=.claude/**",
+    "agent-l10n": "npm run build:cli --silent && node packages/cli/dist/agent-l10n.mjs",
+    "pack:cli": "npm run build:cli && npm pack ./packages/cli"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -1,0 +1,20 @@
+{
+  "name": "@agent-l10n/cli",
+  "version": "0.1.0",
+  "description": "Unofficial local-first localization layer for agent CLIs",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "agent-l10n": "./dist/agent-l10n.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
