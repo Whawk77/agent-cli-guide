@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { agents } from './index';
 
 describe('命令数据完整性', () => {
+  const codexOfficialSlashCommands = [
+    '/permissions', '/ide', '/keymap', '/vim', '/setup-default-sandbox', '/sandbox-add-read-dir',
+    '/agent', '/apps', '/plugins', '/hooks', '/clear', '/rename', '/archive', '/delete', '/compact',
+    '/copy', '/diff', '/exit', '/experimental', '/approve', '/memories', '/skills', '/import',
+    '/feedback', '/init', '/logout', '/mcp', '/mention', '/model', '/fast', '/plan', '/goal',
+    '/personality', '/ps', '/stop', '/fork', '/app', '/btw', '/raw', '/resume', '/new', '/review',
+    '/status', '/usage', '/debug-config', '/statusline', '/title', '/theme', '/pets',
+  ];
+
   it('收录了 7 个 agent，id 与 binary 唯一', () => {
     expect(agents.length).toBe(7);
     expect(new Set(agents.map((a) => a.id)).size).toBe(agents.length);
@@ -54,5 +63,22 @@ describe('命令数据完整性', () => {
         }
       }
     }
+  });
+
+  it('Codex CLI 覆盖官方内置斜杠命令全集（含别名）', () => {
+    const codex = agents.find((agent) => agent.id === 'codex');
+    expect(codex).toBeDefined();
+    const slashEntries = codex!.categories
+      .flatMap((category) => category.entries)
+      .filter((entry) => entry.kind === 'slash');
+    const available = new Set(slashEntries.flatMap((entry) => [entry.name, ...(entry.aliases ?? [])]));
+
+    for (const command of codexOfficialSlashCommands) {
+      expect(available.has(command), `Codex 缺少官方命令 ${command}`).toBe(true);
+    }
+    expect(available.has('/subagents')).toBe(true);
+    expect(available.has('/side')).toBe(true);
+    expect(available.has('/quit')).toBe(true);
+    expect(available.has('/pet')).toBe(true);
   });
 });

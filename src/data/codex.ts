@@ -1083,6 +1083,19 @@ export const codex: AgentDef = {
         },
         {
           kind: 'slash',
+          name: '/sandbox-add-read-dir',
+          argSpec: '<path>',
+          example: '/sandbox-add-read-dir C:\\src\\shared',
+          en: 'Grant the Windows sandbox read access to an extra directory',
+          i18n: {
+            zh: {
+              summary: '给 Windows 沙箱追加一个只读目录',
+              detail: '仅适用于 Windows；用于读取当前可读根目录之外的绝对路径，不会授予写入权限。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
           name: '/ps',
           example: '/ps',
           en: 'Show background terminals and recent output',
@@ -1115,6 +1128,110 @@ export const codex: AgentDef = {
           example: '/logout',
           en: 'Sign out of the current account',
           i18n: { zh: { summary: '退出当前账号' } },
+        },
+        {
+          kind: 'slash',
+          name: '/debug-config',
+          example: '/debug-config',
+          en: 'Print config layer and requirements diagnostics',
+          i18n: {
+            zh: {
+              summary: '查看配置层级与策略要求的诊断信息',
+              detail: '用于排查 config.toml 的优先级、组织策略限制和实验性网络配置。',
+            },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'print',
+                lines: [
+                  { text: 'Config diagnostics', style: 'accent' },
+                  { text: '  user       ~/.codex/config.toml', note: { zh: '用户级配置' } },
+                  { text: '  project    .codex/config.toml', note: { zh: '项目级配置，优先级更高' } },
+                  { text: '  requirements  none', style: 'ok', note: { zh: '当前没有组织策略冲突（仿真）' } },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/statusline',
+          example: '/statusline',
+          en: 'Configure the fields shown in the TUI status line',
+          i18n: {
+            zh: {
+              summary: '配置终端底部状态栏显示哪些字段',
+              detail: '可以选择并排序模型、上下文、限额、Git、token 和会话等字段，结果会保存到 config.toml。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/title',
+          example: '/title',
+          en: 'Configure terminal window or tab title fields',
+          i18n: {
+            zh: {
+              summary: '配置终端窗口或标签页标题字段',
+              detail: '可以组合项目名、运行状态、会话、Git 分支、模型和任务进度等信息。',
+            },
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/theme',
+          example: '/theme',
+          en: 'Choose and persist a syntax-highlighting theme',
+          i18n: {
+            zh: {
+              summary: '预览并选择终端语法高亮主题',
+              detail: '选中的主题会持久保存，影响代码块和 diff 的终端配色。',
+            },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择语法高亮主题（仿真）' },
+                  items: [
+                    { value: 'default-dark', label: 'default-dark', note: { zh: '默认深色主题' } },
+                    { value: 'solarized-dark', label: 'solarized-dark', note: { zh: '低对比度深色主题' } },
+                    { value: 'github-light', label: 'github-light', note: { zh: '适合浅色终端' } },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
+          kind: 'slash',
+          name: '/pets',
+          aliases: ['/pet'],
+          example: '/pets',
+          en: 'Choose or hide a terminal pet',
+          i18n: {
+            zh: {
+              summary: '选择、隐藏或更换终端里的互动小宠物',
+              detail: '这是 TUI 的个性化功能；/pet 与 /pets 效果相同。',
+            },
+          },
+          simulate: {
+            effects: [
+              {
+                type: 'panel',
+                panel: {
+                  title: { zh: '选择终端宠物（仿真）' },
+                  items: [
+                    { value: 'none', label: 'none', note: { zh: '隐藏宠物' } },
+                    { value: 'cat', label: 'cat', note: { zh: '猫咪' } },
+                    { value: 'crab', label: 'crab', note: { zh: '小螃蟹' } },
+                  ],
+                },
+              },
+            ],
+          },
         },
         {
           kind: 'slash',
