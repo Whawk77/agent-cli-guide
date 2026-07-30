@@ -43,6 +43,13 @@ export interface AgentDef {
   homepage: string;
   /** 安装命令 */
   install: string;
+  /** 本轮核验过的官方发行信息。版本源必须能被 scripts/check-releases.mjs 自动读取。 */
+  release: {
+    version: string;
+    channel: 'latest' | 'stable';
+    verifiedAt: string;
+    source: string;
+  };
   /** 模拟终端提示符，如 '$' */
   prompt: string;
   /** 一句话介绍 */

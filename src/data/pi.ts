@@ -1,12 +1,19 @@
 import type { AgentDef } from './types';
+import { quickEntries } from './helpers';
 
 export const pi: AgentDef = {
   id: 'pi',
   name: 'pi',
   binary: 'pi',
-  vendor: 'Mario Zechner / Earendil',
+  vendor: 'Earendil Works',
   homepage: 'https://pi.dev',
-  install: 'npm install -g --ignore-scripts @earendil-works/pi-coding-agent',
+  install: 'npm install -g @earendil-works/pi-coding-agent',
+  release: {
+    version: '0.83.0',
+    channel: 'latest',
+    verifiedAt: '2026-07-30',
+    source: 'https://registry.npmjs.org/@earendil-works%2fpi-coding-agent/latest',
+  },
   prompt: '$',
   tagline: {
     zh: 'Mario Zechner 打造的极简终端编程代理：无内置系统提示套路、支持会话树与多模型切换，一切皆可扩展。',
@@ -15,7 +22,7 @@ export const pi: AgentDef = {
   session: {
     prompt: '>',
     banner: [
-      { text: 'pi v0.82.1', style: 'accent', note: { zh: 'pi 的横幅就这么朴素——极简是它的设计哲学' } },
+      { text: 'pi v0.83.0', style: 'accent', note: { zh: 'pi 的横幅就这么朴素——极简是它的设计哲学' } },
       { text: '{model} · thinking: {thinking}', style: 'dim', note: { zh: '当前模型与思考深度（状态栏同步显示）' } },
       { text: '~/my-project · session: {session}', style: 'dim', note: { zh: '会话默认存为 JSONL 文件，可随意拷贝迁移' } },
     ],
@@ -352,7 +359,7 @@ export const pi: AgentDef = {
           i18n: { zh: { summary: '查看版本号' } },
           simulate: {
             preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: '0.82.1', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+            effects: [{ type: 'print', lines: [{ text: '0.83.0', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
           },
         },
         {
@@ -363,6 +370,22 @@ export const pi: AgentDef = {
           en: 'Display help',
           i18n: { zh: { summary: '显示帮助信息' } },
         },
+        ...quickEntries('flag', 'pi', [
+          ['--append-system-prompt', '<text-or-file>', 'Append text or file contents to the system prompt', '向系统提示词追加文本或文件内容'],
+          ['--exclude-tools', '<tools>', 'Disable a comma-separated list of tools', '按逗号分隔的黑名单禁用工具', ['-xt']],
+          ['--no-approve', undefined, 'Ignore project-local files for this run', '本次运行不信任并忽略项目级本地资源', ['-na']],
+          ['--no-builtin-tools', undefined, 'Disable built-in tools while keeping extension tools', '禁用内置工具但保留扩展和自定义工具', ['-nbt']],
+          ['--no-extensions', undefined, 'Disable automatic extension discovery', '禁用扩展自动发现与加载', ['-ne']],
+          ['--no-prompt-templates', undefined, 'Disable prompt template discovery and loading', '禁用提示词模板发现与加载', ['-np']],
+          ['--no-skills', undefined, 'Disable skill discovery and loading', '禁用技能发现与加载', ['-ns']],
+          ['--no-themes', undefined, 'Disable theme discovery and loading', '禁用主题发现与加载'],
+          ['--no-tools', undefined, 'Disable built-in and extension tools by default', '默认禁用全部内置与扩展工具', ['-nt']],
+          ['--offline', undefined, 'Disable network operations during startup', '启动时禁止联网操作'],
+          ['--prompt-template', '<path>', 'Load a prompt template file or directory', '加载提示词模板文件或目录'],
+          ['--session-dir', '<dir>', 'Choose the session storage and lookup directory', '指定会话存储与检索目录'],
+          ['--session-id', '<id>', 'Use an exact project session ID, creating it if needed', '使用指定项目会话 ID，不存在则创建'],
+          ['--theme', '<path>', 'Load a theme file or directory', '加载主题文件或目录'],
+        ]),
       ],
     },
     {
@@ -406,7 +429,7 @@ export const pi: AgentDef = {
         {
           kind: 'subcommand',
           name: 'update',
-          argSpec: '[source|self]',
+          argSpec: '[source|self|pi]',
           example: 'pi update --all',
           en: 'Update pi itself and/or installed packages; --models refreshes model catalogs',
           i18n: {
@@ -421,7 +444,7 @@ export const pi: AgentDef = {
               {
                 type: 'print',
                 lines: [
-                  { text: 'pi 0.82.1 → up to date', style: 'ok' },
+                  { text: 'pi 0.83.0 → up to date', style: 'ok' },
                   { text: '✓ Updated 2 packages', style: 'ok', note: { zh: '本体与扩展包一条命令全部更新' } },
                 ],
               },
@@ -455,6 +478,19 @@ export const pi: AgentDef = {
           example: 'pi config',
           en: 'Enable or disable resources provided by installed packages',
           i18n: { zh: { summary: '启用/禁用扩展包提供的各项资源' } },
+        },
+        {
+          kind: 'subcommand',
+          name: 'auth',
+          argSpec: '<print-api-key|print-bearer-token>',
+          example: 'pi auth print-bearer-token --provider openai-codex --model gpt-5.5',
+          en: 'Print an API key or refreshed OAuth bearer token for an external client',
+          i18n: {
+            zh: {
+              summary: '为外部客户端输出 API Key 或刷新后的 OAuth Bearer Token',
+              detail: '0.83.0 新增。支持 print-api-key 与 print-bearer-token；输出含敏感凭证，不要写入日志。',
+            },
+          },
         },
       ],
     },

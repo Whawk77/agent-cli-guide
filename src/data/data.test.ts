@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import releaseManifest from '../../scripts/tool-releases.json';
 import { agents } from './index';
 
 describe('命令数据完整性', () => {
@@ -25,6 +26,9 @@ describe('命令数据完整性', () => {
     expect(agent.categories.length).toBeGreaterThan(0);
     expect(agent.tagline.zh.length).toBeGreaterThan(0);
     expect(agent.install.length).toBeGreaterThan(0);
+    expect(agent.release.version.length).toBeGreaterThan(0);
+    expect(agent.release.verifiedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(agent.release.source).toMatch(/^https:\/\//);
     for (const cat of agent.categories) {
       expect(cat.entries.length).toBeGreaterThan(0);
       expect(cat.i18n.zh.title.length).toBeGreaterThan(0);
@@ -35,6 +39,39 @@ describe('命令数据完整性', () => {
         expect(e.en.length).toBeGreaterThan(0);
         expect(e.i18n.zh.summary.length).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it('页面版本元数据与自动核验清单一致', () => {
+    for (const agent of agents) {
+      const release = releaseManifest[agent.id as keyof typeof releaseManifest];
+      expect(release, `${agent.id} 缺少 scripts/tool-releases.json 记录`).toBeDefined();
+      expect(agent.release.version).toBe(release.version);
+      expect(agent.release.channel).toBe(release.channel);
+      expect(agent.release.source).toBe(release.source);
+    }
+  });
+
+  it('七套 CLI 的官方根参数面已达到本轮实测数量', () => {
+    const minimumCounts: Record<string, number> = {
+      'claude-code': 58,
+      codex: 21,
+      gemini: 29,
+      grok: 42,
+      pi: 38,
+      aider: 130,
+      cursor: 43,
+    };
+
+    for (const agent of agents) {
+      const available = new Set(
+        agent.categories
+          .flatMap((category) => category.entries)
+          .filter((entry) => entry.kind === 'flag')
+          .flatMap((entry) => [entry.name, ...(entry.aliases ?? [])])
+          .filter((name) => name.startsWith('--')),
+      );
+      expect(available.size, `${agent.id} 的根参数数量落后于官方帮助`).toBeGreaterThanOrEqual(minimumCounts[agent.id]);
     }
   });
 
@@ -86,7 +123,7 @@ describe('命令数据完整性', () => {
     }
   });
 
-  it('Codex 当前实机菜单与 0.146.0-alpha.3.1 输出一致', () => {
+  it('Codex 当前菜单与 0.146.0 稳定版输出一致', () => {
     const codex = agents.find((agent) => agent.id === 'codex');
     const currentMenu = codex?.categories.find((category) => category.id === 'slash-current-menu');
     expect(currentMenu?.entries.map((entry) => entry.name)).toEqual([
@@ -99,5 +136,41 @@ describe('命令数据完整性', () => {
       '/experimental',
       '/approve',
     ]);
+  });
+
+  it('Grok Build 0.2.114 的 CLI 与 TUI 新命令已收录', () => {
+    const grok = agents.find((agent) => agent.id === 'grok');
+    expect(grok).toBeDefined();
+    const entries = grok!.categories.flatMap((category) => category.entries);
+    const byKind = (kind: 'flag' | 'subcommand' | 'slash') =>
+      new Set(entries.filter((entry) => entry.kind === kind).flatMap((entry) => [entry.name, ...(entry.aliases ?? [])]));
+
+    const flags = byKind('flag');
+    for (const flag of [
+      '--agent', '--agents', '--allow', '--deny', '--permission-mode', '--sandbox', '--tools',
+      '--disallowed-tools', '--reasoning-effort', '--json-schema', '--prompt-json', '--prompt-file',
+      '--fork-session', '--restore-code', '--worktree', '--worktree-ref', '--minimal', '--fullscreen',
+    ]) {
+      expect(flags.has(flag), `Grok 缺少 CLI 选项 ${flag}`).toBe(true);
+    }
+
+    const subcommands = byKind('subcommand');
+    for (const command of [
+      'agent', 'completions', 'dashboard', 'doctor', 'export', 'inspect', 'leader', 'login', 'logout',
+      'mcp', 'memory', 'models', 'plugin', 'sessions', 'setup', 'trace', 'update', 'version', 'worktree', 'wrap',
+    ]) {
+      expect(subcommands.has(command), `Grok 缺少子命令 ${command}`).toBe(true);
+    }
+
+    const slash = byKind('slash');
+    for (const command of [
+      '/docs', '/delete', '/history', '/edit-prompt', '/expand', '/minimal', '/fullscreen', '/cd',
+      '/announcements', '/workflows', '/recap', '/doctor', '/voice', '/timeline',
+      '/toggle-mouse-reporting', '/jump', '/tutorial',
+    ]) {
+      expect(slash.has(command), `Grok 缺少 TUI 命令 ${command}`).toBe(true);
+    }
+
+    expect(grok!.session?.statusFields.find((field) => field.key === 'model')?.initial).toBe('grok-4.5');
   });
 });

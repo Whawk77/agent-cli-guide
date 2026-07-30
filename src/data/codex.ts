@@ -1,4 +1,5 @@
 import type { AgentDef } from './types';
+import { quickEntries } from './helpers';
 
 export const codex: AgentDef = {
   id: 'codex',
@@ -7,6 +8,12 @@ export const codex: AgentDef = {
   vendor: 'OpenAI',
   homepage: 'https://developers.openai.com/codex/cli',
   install: 'npm install -g @openai/codex',
+  release: {
+    version: '0.146.0',
+    channel: 'stable',
+    verifiedAt: '2026-07-30',
+    source: 'https://registry.npmjs.org/@openai%2fcodex/latest',
+  },
   prompt: '$',
   tagline: {
     zh: 'OpenAI 官方终端编程代理，在命令行里读代码、改文件、跑命令，支持沙箱与审批控制。',
@@ -16,7 +23,7 @@ export const codex: AgentDef = {
     prompt: '›',
     banner: [
       { text: '╭──────────────────────────────────────────────╮', style: 'dim' },
-      { text: '│  >_ OpenAI Codex (v0.146.0-alpha.3.1)        │', style: 'accent', note: { zh: '本机实测版本（2026-07-27）' } },
+      { text: '│  >_ OpenAI Codex (v0.146.0)                  │', style: 'accent', note: { zh: '官方稳定版（2026-07-30 核验）' } },
       { text: '╰──────────────────────────────────────────────╯', style: 'dim' },
       { text: 'model:      {model} {effort} · /model to change', style: 'dim', note: { zh: '当前模型与推理力度' } },
       { text: 'directory:  ~/my-project', style: 'dim' },
@@ -284,7 +291,7 @@ export const codex: AgentDef = {
           i18n: { zh: { summary: '查看版本号' } },
           simulate: {
             preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: 'codex-cli 0.146.0-alpha.3.1', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+            effects: [{ type: 'print', lines: [{ text: 'codex-cli 0.146.0', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
           },
         },
         {
@@ -295,6 +302,14 @@ export const codex: AgentDef = {
           en: 'Show help for the command',
           i18n: { zh: { summary: '显示帮助信息（本站会显示翻译版）' } },
         },
+        ...quickEntries('flag', 'codex', [
+          ['--dangerously-bypass-hook-trust', undefined, 'Run enabled hooks without requiring persisted hook trust', '本次运行跳过已启用钩子的持久信任检查'],
+          ['--local-provider', '<provider>', 'Choose lmstudio or ollama as the local provider', '指定本地模型提供方（lmstudio 或 ollama）'],
+          ['--no-alt-screen', undefined, 'Run the TUI inline and preserve terminal scrollback', '不用终端备用屏幕，保留滚动历史'],
+          ['--remote', '<addr>', 'Connect the TUI to a remote app-server endpoint', '把 TUI 连接到远程 app-server 端点'],
+          ['--remote-auth-token-env', '<env>', 'Read the remote app-server bearer token from an environment variable', '从环境变量读取远程 app-server 的令牌'],
+          ['--strict-config', undefined, 'Fail when config.toml contains unknown fields', '配置文件包含未知字段时直接报错'],
+        ]),
       ],
     },
     {
@@ -528,14 +543,6 @@ export const codex: AgentDef = {
         },
         {
           kind: 'subcommand',
-          name: 'execpolicy',
-          argSpec: '<command...>',
-          example: 'codex execpolicy check "rm -rf /"',
-          en: 'Evaluate command execution policy rules',
-          i18n: { zh: { summary: '检查某条命令会命中什么执行策略' } },
-        },
-        {
-          kind: 'subcommand',
           name: 'features',
           example: 'codex features list',
           en: 'Manage feature flags',
@@ -572,7 +579,7 @@ export const codex: AgentDef = {
           simulate: {
             preventSession: true,
             effects: [
-              { type: 'print', lines: [{ text: '✓ Codex CLI is up to date (0.146.0-alpha.3.1)', style: 'ok', note: { zh: '已是当前实测版本' } }] },
+              { type: 'print', lines: [{ text: '✓ Codex CLI is up to date (0.146.0)', style: 'ok', note: { zh: '已是当前官方稳定版' } }] },
             ],
           },
         },
@@ -593,7 +600,7 @@ export const codex: AgentDef = {
               {
                 type: 'print',
                 lines: [
-                  { text: '✓ Installation: codex 0.146.0-alpha.3.1', style: 'ok' },
+                  { text: '✓ Installation: codex 0.146.0', style: 'ok' },
                   { text: '✓ Auth: signed in with ChatGPT (Plus)', style: 'ok' },
                   { text: '✓ Config: ~/.codex/config.toml parsed OK', style: 'ok' },
                   { text: '! Sandbox: seatbelt profile outdated, run codex update', style: 'warn', note: { zh: '发现问题会给出修复建议' } },
@@ -602,6 +609,11 @@ export const codex: AgentDef = {
             ],
           },
         },
+        ...quickEntries('subcommand', 'codex', [
+          ['debug', undefined, 'Open Codex debugging tools', '打开 Codex 调试工具'],
+          ['exec-server', undefined, 'Run the experimental standalone exec-server service', '运行实验性的独立 exec-server 服务'],
+          ['help', '[command]', 'Print help for Codex or a subcommand', '显示 Codex 或指定子命令的帮助'],
+        ]),
       ],
     },
     {
@@ -1448,7 +1460,7 @@ export const codex: AgentDef = {
 
 /**
  * 源码枚举会同时包含隐藏、实验、平台限定与兼容命令，不能等同于用户按 `/`
- * 看到的菜单。这里按 0.146.0-alpha.3.1 的实机输出拆层，同时保留完整参考集。
+ * 看到的菜单。这里按 0.146.0 稳定版输出拆层，同时保留完整参考集。
  */
 const currentCodexMenu = [
   '/model',
@@ -1478,7 +1490,7 @@ if (slashCategory) {
     1,
     {
       id: 'slash-current-menu',
-      i18n: { zh: { title: '当前实机 / 菜单（0.146.0-alpha.3.1）' } },
+      i18n: { zh: { title: '当前 / 菜单（Codex 0.146.0 稳定版）' } },
       entries: currentEntries,
     },
     {

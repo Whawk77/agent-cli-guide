@@ -1,0 +1,54 @@
+{
+  "claude-code": {
+    "name": "Claude Code",
+    "version": "2.1.220",
+    "channel": "latest",
+    "source": "https://registry.npmjs.org/@anthropic-ai%2fclaude-code/latest",
+    "extract": { "type": "json", "path": ["version"] }
+  },
+  "codex": {
+    "name": "Codex CLI",
+    "version": "0.146.0",
+    "channel": "stable",
+    "source": "https://registry.npmjs.org/@openai%2fcodex/latest",
+    "extract": { "type": "json", "path": ["version"] }
+  },
+  "gemini": {
+    "name": "Gemini CLI",
+    "version": "0.53.0",
+    "channel": "stable",
+    "source": "https://registry.npmjs.org/@google%2fgemini-cli/latest",
+    "extract": { "type": "json", "path": ["version"] }
+  },
+  "grok": {
+    "name": "Grok Build",
+    "version": "0.2.114",
+    "channel": "stable",
+    "source": "https://x.ai/cli/stable",
+    "extract": { "type": "text" }
+  },
+  "pi": {
+    "name": "pi",
+    "version": "0.83.0",
+    "channel": "latest",
+    "source": "https://registry.npmjs.org/@earendil-works%2fpi-coding-agent/latest",
+    "extract": { "type": "json", "path": ["version"] }
+  },
+  "aider": {
+    "name": "Aider",
+    "version": "0.86.2",
+    "channel": "latest",
+    "source": "https://pypi.org/pypi/aider-chat/json",
+    "extract": { "type": "json", "path": ["info", "version"] }
+  },
+  "cursor": {
+    "name": "Cursor CLI",
+    "version": "2026.07.23-e383d2b",
+    "channel": "latest",
+    "source": "https://cursor.com/install",
+    "extract": {
+      "type": "regex",
+      "pattern": "FINAL_DIR=\"\\$HOME/\\.local/share/cursor-agent/versions/([^\"/]+)\""
+    }
+  }
+}
