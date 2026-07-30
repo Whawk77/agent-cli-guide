@@ -84,7 +84,9 @@ v0.2 已加入 macOS Codex 中文 TUI 预览：按 `/` 后，`0.146.0-alpha.3.1`
 - **默认（免费）**：发现变化时自动开 issue，列出变动的页面
 - **全自动模式**：在仓库 Settings → Secrets and variables → Actions 里配置 `ANTHROPIC_API_KEY` 后，发现变化会直接让 Claude 抓取新文档、更新数据文件并开 PR 供你审核（有 API 调用费用）
 
-手动触发：Actions 页面选 "Check official docs for updates" → Run workflow。更新数据后运行 `node scripts/check-docs.mjs --update` 刷新快照基线。
+手动触发：Actions 页面选 "Check official docs for updates" → Run workflow。更新数据后运行 `node scripts/check-docs.mjs --update` 刷新全部快照；只更新单个工具时可用 `node scripts/check-docs.mjs --agent grok --update`。
+
+Grok Build 除文档页外还跟踪官方仓库中的 CLI 参数定义和 TUI 内置命令注册表，文档尚未发布但已经进入新版二进制的命令也能被发现。
 
 ## 数据贡献
 

@@ -18,7 +18,9 @@
     "https://docs.x.ai/build/modes-and-commands",
     "https://docs.x.ai/build/cli/headless-scripting",
     "https://docs.x.ai/build/keyboard-shortcuts",
-    "https://docs.x.ai/build/features/skills-plugins-marketplaces"
+    "https://docs.x.ai/build/features/skills-plugins-marketplaces",
+    "https://raw.githubusercontent.com/xai-org/grok-build/main/crates/codegen/xai-grok-pager/src/app/cli.rs",
+    "https://raw.githubusercontent.com/xai-org/grok-build/main/crates/codegen/xai-grok-pager/src/slash/commands/mod.rs"
   ],
   "pi": [
     "https://pi.dev/docs/latest/usage",

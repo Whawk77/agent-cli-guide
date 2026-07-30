@@ -100,4 +100,40 @@ describe('命令数据完整性', () => {
       '/approve',
     ]);
   });
+
+  it('Grok Build 0.2.112 的 CLI 与 TUI 新命令已收录', () => {
+    const grok = agents.find((agent) => agent.id === 'grok');
+    expect(grok).toBeDefined();
+    const entries = grok!.categories.flatMap((category) => category.entries);
+    const byKind = (kind: 'flag' | 'subcommand' | 'slash') =>
+      new Set(entries.filter((entry) => entry.kind === kind).flatMap((entry) => [entry.name, ...(entry.aliases ?? [])]));
+
+    const flags = byKind('flag');
+    for (const flag of [
+      '--agent', '--agents', '--allow', '--deny', '--permission-mode', '--sandbox', '--tools',
+      '--disallowed-tools', '--reasoning-effort', '--json-schema', '--prompt-json', '--prompt-file',
+      '--fork-session', '--restore-code', '--worktree', '--worktree-ref', '--minimal', '--fullscreen',
+    ]) {
+      expect(flags.has(flag), `Grok 缺少 CLI 选项 ${flag}`).toBe(true);
+    }
+
+    const subcommands = byKind('subcommand');
+    for (const command of [
+      'agent', 'completions', 'dashboard', 'doctor', 'export', 'inspect', 'leader', 'login', 'logout',
+      'mcp', 'memory', 'models', 'plugin', 'sessions', 'setup', 'trace', 'update', 'version', 'worktree', 'wrap',
+    ]) {
+      expect(subcommands.has(command), `Grok 缺少子命令 ${command}`).toBe(true);
+    }
+
+    const slash = byKind('slash');
+    for (const command of [
+      '/docs', '/delete', '/history', '/edit-prompt', '/expand', '/minimal', '/fullscreen', '/cd',
+      '/announcements', '/workflows', '/recap', '/doctor', '/voice', '/timeline',
+      '/toggle-mouse-reporting', '/jump', '/tutorial',
+    ]) {
+      expect(slash.has(command), `Grok 缺少 TUI 命令 ${command}`).toBe(true);
+    }
+
+    expect(grok!.session?.statusFields.find((field) => field.key === 'model')?.initial).toBe('grok-4.5');
+  });
 });
