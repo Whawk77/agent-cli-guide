@@ -1,17 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { agents } from './data';
 import type { CommandEntry } from './data/types';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
 import Terminal, { type TermAction } from './components/Terminal';
 import type { SearchHit } from './lib/search';
+import { useTheme } from './lib/theme';
+import { t } from './i18n/ui';
 
 export default function App() {
   const [agentId, setAgentId] = useState(agents[0].id);
   const [action, setAction] = useState<TermAction | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme();
 
   const agent = agents.find((a) => a.id === agentId) ?? agents[0];
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    sidebarRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSidebarOpen(false);
+        requestAnimationFrame(() =>
+          document.querySelector<HTMLButtonElement>('.menu-btn')?.focus(),
+        );
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [sidebarOpen]);
 
   const insertTextFor = (entry: CommandEntry): string | undefined => {
     if (entry.kind === 'shortcut') return undefined;
@@ -39,16 +58,32 @@ export default function App() {
       <TopBar
         agents={agents}
         currentId={agent.id}
-        onSelect={setAgentId}
+        onSelect={(id) => {
+          setAgentId(id);
+          setSidebarOpen(false);
+        }}
         onPickHit={pickHit}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        sidebarOpen={sidebarOpen}
+        themePreference={themePreference}
+        onThemeChange={setThemePreference}
       />
-      <div className="main">
-        <div className={sidebarOpen ? 'sidebar-wrap open' : 'sidebar-wrap'}>
+      <main className="main">
+        <button
+          className={sidebarOpen ? 'sidebar-backdrop open' : 'sidebar-backdrop'}
+          aria-label={t.closeSidebar}
+          onClick={() => setSidebarOpen(false)}
+        />
+        <div
+          id="command-sidebar"
+          ref={sidebarRef}
+          className={sidebarOpen ? 'sidebar-wrap open' : 'sidebar-wrap'}
+          tabIndex={-1}
+        >
           <Sidebar agent={agent} onPick={pickEntry} />
         </div>
         <Terminal agent={agent} agents={agents} action={action} onSwitchAgent={setAgentId} />
-      </div>
+      </main>
     </div>
   );
 }

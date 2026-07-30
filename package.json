@@ -9,16 +9,20 @@
     "build:web": "tsc && vite build",
     "build:cli": "node scripts/build-cli.mjs",
     "preview": "vite preview",
-    "test": "vitest run --exclude=.claude/**",
+    "test": "vitest run --exclude=.claude/** --exclude=tests/ui/**",
+    "test:ui": "playwright test",
     "check:releases": "node scripts/check-releases.mjs",
     "agent-l10n": "npm run build:cli --silent && node packages/cli/dist/agent-l10n.mjs",
     "pack:cli": "npm run build:cli && npm pack ./packages/cli"
   },
   "dependencies": {
+    "lucide-react": "^1.28.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

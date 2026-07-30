@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="交互式学习各类 AI Agent CLI：在模拟终端里敲命令，实时查看每个选项的中文翻译和解释。覆盖 Claude Code、Codex、Gemini CLI 等。" />
+    <script>
+      (() => {
+        const key = 'agent-cli-guide:theme';
+        let preference = 'system';
+        try {
+          const saved = localStorage.getItem(key);
+          if (saved === 'light' || saved === 'dark' || saved === 'system') preference = saved;
+        } catch {}
+        const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.themePreference = preference;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <title>Agent CLI 指南 — 边敲边学的终端模拟器</title>
   </head>
   <body>

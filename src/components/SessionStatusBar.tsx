@@ -6,7 +6,7 @@ export default function SessionStatusBar({ agent, state }: { agent: AgentDef; st
   const fields = agent.session?.statusFields ?? [];
   if (fields.length === 0) return null;
   return (
-    <div className="status-bar">
+    <div className="status-bar" role="status" aria-live="polite">
       <span className="status-agent">{agent.name}</span>
       {fields.map((f) => (
         <span key={f.key} className="status-field">
