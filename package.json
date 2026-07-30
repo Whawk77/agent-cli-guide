@@ -10,6 +10,7 @@
     "build:cli": "node scripts/build-cli.mjs",
     "preview": "vite preview",
     "test": "vitest run --exclude=.claude/**",
+    "check:releases": "node scripts/check-releases.mjs",
     "agent-l10n": "npm run build:cli --silent && node packages/cli/dist/agent-l10n.mjs",
     "pack:cli": "npm run build:cli && npm pack ./packages/cli"
   },

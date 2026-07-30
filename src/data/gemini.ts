@@ -1,4 +1,5 @@
 import type { AgentDef } from './types';
+import { quickEntries } from './helpers';
 
 export const gemini: AgentDef = {
   id: 'gemini',
@@ -7,6 +8,12 @@ export const gemini: AgentDef = {
   vendor: 'Google',
   homepage: 'https://github.com/google-gemini/gemini-cli',
   install: 'npm install -g @google/gemini-cli',
+  release: {
+    version: '0.53.0',
+    channel: 'stable',
+    verifiedAt: '2026-07-30',
+    source: 'https://registry.npmjs.org/@google%2fgemini-cli/latest',
+  },
   prompt: '$',
   tagline: {
     zh: 'Google 开源的终端 AI 代理，把 Gemini 模型接进命令行，读代码、跑命令、装扩展一站搞定。',
@@ -301,7 +308,7 @@ export const gemini: AgentDef = {
           i18n: { zh: { summary: '查看版本号' } },
           simulate: {
             preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: '0.52.0', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+            effects: [{ type: 'print', lines: [{ text: '0.53.0', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
           },
         },
         {
@@ -312,6 +319,18 @@ export const gemini: AgentDef = {
           en: 'Show help information',
           i18n: { zh: { summary: '显示帮助信息（本站会显示翻译版）' } },
         },
+        ...quickEntries('flag', 'gemini', [
+          ['--accept-raw-output-risk', undefined, 'Suppress the security warning for raw model output', '确认承担原始模型输出的安全风险，不再显示警告'],
+          ['--acp', undefined, 'Start the agent in ACP mode', '以 ACP 模式启动代理'],
+          ['--admin-policy', '<paths...>', 'Load additional administrator policy files or directories', '加载额外的管理员策略文件或目录'],
+          ['--allowed-mcp-server-names', '<names...>', 'Restrict the allowed MCP server names', '限定允许使用的 MCP 服务器名称'],
+          ['--allowed-tools', '<tools...>', 'Deprecated tool allowlist; use the Policy Engine instead', '旧版工具白名单，官方建议改用策略引擎'],
+          ['--experimental-acp', undefined, 'Deprecated alias for --acp', '--acp 的已弃用旧别名'],
+          ['--policy', '<paths...>', 'Load additional policy files or directories', '加载额外的策略文件或目录'],
+          ['--raw-output', undefined, 'Disable sanitization of model output', '关闭模型输出清理，允许 ANSI 等原始内容'],
+          ['--session-file', '<file>', 'Load a session from a JSON file', '从 JSON 文件载入会话'],
+          ['--session-id', '<uuid>', 'Start a new session with a caller-supplied UUID', '用指定 UUID 创建新会话'],
+        ]),
       ],
     },
     {
@@ -366,17 +385,10 @@ export const gemini: AgentDef = {
             },
           },
         },
-        {
-          kind: 'subcommand',
-          name: 'update',
-          example: 'gemini update',
-          en: 'Update Gemini CLI to the latest version',
-          i18n: { zh: { summary: '更新到最新版本' } },
-          simulate: {
-            preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: '✓ Gemini CLI is already up to date (v0.52.0).', style: 'ok', note: { zh: '已是最新版本' } }] }],
-          },
-        },
+        ...quickEntries('subcommand', 'gemini', [
+          ['hooks', undefined, 'Manage Gemini CLI hooks', '管理 Gemini CLI 钩子', ['hook']],
+          ['gemma', undefined, 'Manage local Gemma model routing', '管理本地 Gemma 模型路由'],
+        ]),
       ],
     },
     {
@@ -403,7 +415,7 @@ export const gemini: AgentDef = {
                 type: 'print',
                 lines: [
                   { text: 'About Gemini CLI', style: 'accent' },
-                  { text: 'CLI Version     0.52.0', style: 'dim' },
+                  { text: 'CLI Version     0.53.0', style: 'dim' },
                   { text: 'Model           {model}', style: 'dim' },
                   { text: 'Sandbox         {sandbox}', style: 'dim' },
                   { text: 'OS              darwin', style: 'dim' },

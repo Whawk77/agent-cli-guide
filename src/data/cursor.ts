@@ -1,4 +1,5 @@
 import type { AgentDef } from './types';
+import { quickEntries } from './helpers';
 
 export const cursor: AgentDef = {
   id: 'cursor',
@@ -7,6 +8,12 @@ export const cursor: AgentDef = {
   vendor: 'Cursor (Anysphere)',
   homepage: 'https://cursor.com/docs/cli',
   install: 'curl https://cursor.com/install -fsS | bash',
+  release: {
+    version: '2026.07.23-e383d2b',
+    channel: 'latest',
+    verifiedAt: '2026-07-30',
+    source: 'https://cursor.com/install',
+  },
   prompt: '$',
   tagline: {
     zh: 'Cursor 出品的终端编程代理，把编辑器里的 Agent 能力搬进命令行，支持 Agent / Plan / Ask 三种模式。',
@@ -253,7 +260,7 @@ export const cursor: AgentDef = {
           i18n: { zh: { summary: '查看版本号' } },
           simulate: {
             preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: '2026.07.23-a1b2c3d', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+            effects: [{ type: 'print', lines: [{ text: '2026.07.23-e383d2b', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
           },
         },
         {
@@ -264,6 +271,34 @@ export const cursor: AgentDef = {
           en: 'Display help for the command',
           i18n: { zh: { summary: '显示帮助信息' } },
         },
+        ...quickEntries('flag', 'cursor-agent', [
+          ['--allow-paths', '<paths...>', 'Allow access to additional filesystem paths', '允许访问额外的文件系统路径'],
+          ['--auth-token-file', '<file>', 'Read an authentication token from a file', '从文件读取认证令牌'],
+          ['--blocked-patterns', '<patterns...>', 'Block matching command or path patterns', '阻止匹配的命令或路径模式'],
+          ['--data-dir', '<dir>', 'Choose the Cursor Agent data directory', '指定 Cursor Agent 数据目录'],
+          ['--debug', undefined, 'Enable debug output', '启用调试输出'],
+          ['--format', '<format>', 'Choose the output format for management commands', '设置管理命令的输出格式'],
+          ['--header', '<name:value>', 'Attach an HTTP header; may be repeated', '附加 HTTP 请求头，可重复传入'],
+          ['--idle-release-timeout', '<duration>', 'Release an idle worker after a timeout', '工作进程空闲超时后自动释放'],
+          ['--json', undefined, 'Emit JSON output in supported non-interactive workflows', '在支持的非交互场景输出 JSON'],
+          ['--label', '<label>', 'Attach a label to the run', '为本次运行附加标签'],
+          ['--labels-file', '<path>', 'Load labels from a file', '从文件加载标签配置'],
+          ['--management-addr', '<addr>', 'Set the management service address', '设置管理服务地址'],
+          ['--name', '<name>', 'Set the session or worker name', '设置会话或工作进程名称'],
+          ['--network', '<mode>', 'Configure network access for the sandbox', '配置沙箱网络访问策略'],
+          ['--plugin-dir', '<dir>', 'Load plugins from a directory', '从指定目录加载插件'],
+          ['--pool', '<name>', 'Select an execution pool', '选择任务执行池'],
+          ['--pool-name', '<name>', 'Set the execution pool name', '设置任务执行池名称'],
+          ['--readonly-paths', '<paths...>', 'Grant read-only access to additional paths', '为额外路径授予只读访问'],
+          ['--sb-debug', undefined, 'Enable sandbox debug logging', '启用沙箱调试日志'],
+          ['--single-use', undefined, 'Run as a single-use agent session', '以一次性代理会话运行'],
+          ['--skip-worktree-setup', undefined, 'Skip automatic worktree setup', '跳过自动 Git worktree 准备'],
+          ['--stream-partial-output', undefined, 'Stream partial output as it is generated', '实时流式输出生成中的增量内容'],
+          ['--verbose', undefined, 'Enable verbose logging', '输出更详细的运行日志'],
+          ['--worker-dir', '<dir>', 'Choose the worker directory', '指定工作进程目录'],
+          ['--workspace', '<path>', 'Choose the workspace path', '指定工作区路径'],
+          ['--worktree-base', '<ref>', 'Choose the base ref for a new worktree', '指定新 worktree 使用的基线引用'],
+        ]),
       ],
     },
     {
@@ -329,7 +364,7 @@ export const cursor: AgentDef = {
               {
                 type: 'print',
                 lines: [
-                  { text: 'Cursor Agent  2026.07.23-a1b2c3d', style: 'accent' },
+                  { text: 'Cursor Agent  2026.07.23-e383d2b', style: 'accent' },
                   { text: 'OS: darwin arm64', style: 'dim' },
                   { text: 'Account: you@example.com (Pro)', style: 'dim', note: { zh: '版本、系统与账号一览（仿真）' } },
                 ],
@@ -741,6 +776,21 @@ export const cursor: AgentDef = {
           en: 'Exit the application',
           i18n: { zh: { summary: '退出 Cursor CLI（双击 Ctrl+D 同效）' } },
         },
+        ...quickEntries('slash', '', [
+          ['/auto-run', undefined, 'Configure automatic command execution', '配置命令自动执行规则'],
+          ['/compress', undefined, 'Compress the conversation context', '压缩当前对话上下文'],
+          ['/copy', undefined, 'Copy the latest response', '复制最近一条回复'],
+          ['/copy-conversation-id', undefined, 'Copy the current conversation ID', '复制当前会话 ID'],
+          ['/copy-request-id', undefined, 'Copy the most recent request ID', '复制最近一次请求 ID'],
+          ['/line-numbers', undefined, 'Toggle line numbers in code output', '开关代码输出中的行号'],
+          ['/logout', undefined, 'Sign out of Cursor', '退出 Cursor 账号'],
+          ['/logs', undefined, 'Open or show CLI logs', '打开或显示 CLI 日志'],
+          ['/max-mode', undefined, 'Toggle Max mode', '开关 Max 模式'],
+          ['/new', undefined, 'Start a new chat', '新建对话', ['/new-chat', '/newchat']],
+          ['/setup-terminal', undefined, 'Configure terminal integration', '配置终端集成'],
+          ['/show-thinking', undefined, 'Toggle display of model thinking', '开关模型思考过程显示'],
+          ['/status-indicators', undefined, 'Configure status indicators', '配置状态指示器'],
+        ]),
       ],
     },
     {

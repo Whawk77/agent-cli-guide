@@ -1,12 +1,12 @@
 import { fixedWidthRules, type TerminalTranslationRule } from '../terminal-localizer';
 
 /**
- * 取自 Codex 0.146.0-alpha.3.1 的实机 `/` 菜单。
+ * 取自 Codex 0.146.0 稳定版的 `/` 菜单。
  *
  * 这里刻意使用精确英文匹配：上游改文案时宁可保留英文，也不能误改模型输出、
  * Shell 输出或审批提示。
  */
-export const CODEX_TUI_VERIFIED_VERSION = '0.146.0-alpha.3.1';
+export const CODEX_TUI_VERIFIED_VERSION = '0.146.0';
 
 const menuRules: TerminalTranslationRule[] = [
   {

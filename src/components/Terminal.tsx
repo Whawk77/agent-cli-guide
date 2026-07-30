@@ -264,6 +264,13 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
           </div>
           <div className="welcome-tagline">{agent.tagline[locale]}</div>
           <div className="welcome-meta">
+            官方版本:{' '}
+            <a href={agent.release.source} target="_blank" rel="noreferrer">
+              <code>v{agent.release.version}</code>
+            </a>{' '}
+            · {agent.release.channel === 'stable' ? '稳定版' : '最新版'} · 核验于 {agent.release.verifiedAt}
+          </div>
+          <div className="welcome-meta">
             {t.installLabel}: <code>{agent.install}</code>
           </div>
           <div className="welcome-meta">

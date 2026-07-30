@@ -7,6 +7,12 @@ export const grok: AgentDef = {
   vendor: 'xAI',
   homepage: 'https://docs.x.ai/build/overview',
   install: 'curl -fsSL https://x.ai/cli/install.sh | bash',
+  release: {
+    version: '0.2.114',
+    channel: 'stable',
+    verifiedAt: '2026-07-30',
+    source: 'https://x.ai/cli/stable',
+  },
   prompt: '$',
   tagline: {
     zh: 'xAI 官方终端编程代理：全屏 TUI 读改代码、跑命令，支持规划模式、子代理和无头 CI 运行。',
@@ -447,7 +453,7 @@ export const grok: AgentDef = {
           i18n: { zh: { summary: '查看版本号' } },
           simulate: {
             preventSession: true,
-            effects: [{ type: 'print', lines: [{ text: 'grok 0.2.112', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
+            effects: [{ type: 'print', lines: [{ text: 'grok 0.2.114', note: { zh: '打印版本号后直接退出，不进入会话' } }] }],
           },
         },
         {

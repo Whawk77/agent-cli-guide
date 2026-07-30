@@ -10,15 +10,17 @@
 
 ## 已收录
 
-| 工具 | binary | 收录程度 |
-| --- | --- | --- |
-| Claude Code (Anthropic) | `claude` | 全量 |
-| Codex CLI (OpenAI) | `codex` | 全量 |
-| Gemini CLI (Google) | `gemini` | 全量 |
-| Grok Build (xAI) | `grok` | 核心命令 |
-| pi (Earendil / Mario Zechner) | `pi` | 核心命令 |
-| Aider | `aider` | 核心命令 |
-| Cursor CLI | `cursor-agent` | 核心命令 |
+| 工具 | binary | 官方版本 | 收录程度 |
+| --- | --- | --- | --- |
+| Claude Code (Anthropic) | `claude` | `2.1.220` | 全量 |
+| Codex CLI (OpenAI) | `codex` | `0.146.0` 稳定版 | 全量 |
+| Gemini CLI (Google) | `gemini` | `0.53.0` 稳定版 | 全量 |
+| Grok Build (xAI) | `grok` | `0.2.114` 稳定版 | 核心命令 |
+| pi (Earendil Works) | `pi` | `0.83.0` | 核心命令 |
+| Aider | `aider` | `0.86.2` | 核心命令 |
+| Cursor CLI | `cursor-agent` | `2026.07.23-e383d2b` | 核心命令 |
+
+以上版本于 `2026-07-30` 从各工具的官方注册表、稳定版指针或安装脚本核验。运行 `npm run check:releases` 可实时检查七项是否仍为官方最新版。
 
 界面语言：中文（数据结构已为多语言预留，欢迎贡献其他语言翻译）。
 
@@ -28,6 +30,7 @@
 npm install
 npm run dev      # 本地开发
 npm run test     # 解析器单元测试
+npm run check:releases # 对照官方版本源检查七套 CLI
 npm run build    # 产出静态文件到 dist/
 ```
 
@@ -64,7 +67,7 @@ agent-l10n --passthrough codex --version
 agent-l10n doctor
 ```
 
-v0.2 已加入 macOS Codex 中文 TUI 预览：按 `/` 后，`0.146.0-alpha.3.1` 实机公开的 8 条菜单说明会原位替换为中文。它只匹配已验证的固定界面短语；模型回答、Shell 输出和未知文案保持原样。其他平台与其他 Agent 暂时自动降级为安全透传。
+v0.2 已加入 macOS Codex 中文 TUI 预览：按 `/` 后，`0.146.0` 稳定版公开的 8 条菜单说明会原位替换为中文。它只匹配已验证的固定界面短语；模型回答、Shell 输出和未知文案保持原样。其他平台与其他 Agent 暂时自动降级为安全透传。
 
 ### 安全原则
 
@@ -79,12 +82,12 @@ v0.2 已加入 macOS Codex 中文 TUI 预览：按 `/` 后，`0.146.0-alpha.3.1`
 
 ## 官方文档变化自动跟进
 
-`.github/workflows/check-docs.yml` 每周一自动抓取 `scripts/doc-sources.json` 里各 CLI 的官方文档页，与 `docs-snapshots/` 里的快照对比：
+`.github/workflows/check-docs.yml` 每周一会同时检查两件事：抓取 `scripts/doc-sources.json` 里的官方文档页并与快照对比；读取 `scripts/tool-releases.json` 指向的官方发行源并核对版本号。
 
 - **默认（免费）**：发现变化时自动开 issue，列出变动的页面
 - **全自动模式**：在仓库 Settings → Secrets and variables → Actions 里配置 `ANTHROPIC_API_KEY` 后，发现变化会直接让 Claude 抓取新文档、更新数据文件并开 PR 供你审核（有 API 调用费用）
 
-手动触发：Actions 页面选 "Check official docs for updates" → Run workflow。更新数据后运行 `node scripts/check-docs.mjs --update` 刷新全部快照；只更新单个工具时可用 `node scripts/check-docs.mjs --agent grok --update`。
+手动触发：Actions 页面选 "Check official docs for updates" → Run workflow。本地可运行 `npm run check:releases` 核验版本；更新数据后运行 `node scripts/check-docs.mjs --update` 刷新全部快照；只更新单个工具时可用 `node scripts/check-docs.mjs --agent grok --update`。
 
 Grok Build 除文档页外还跟踪官方仓库中的 CLI 参数定义和 TUI 内置命令注册表，文档尚未发布但已经进入新版二进制的命令也能被发现。
 
