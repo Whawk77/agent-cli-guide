@@ -8,11 +8,16 @@ interface Props {
 
 export default function Sidebar({ agent, onPick }: Props) {
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" aria-label={`${agent.name} ${t.sidebarTitle}`}>
       <div className="sidebar-header">{t.sidebarTitle}</div>
       {agent.categories.map((cat) => (
         <details key={cat.id} open className="cat">
-          <summary>{cat.i18n[locale].title}</summary>
+          <summary>
+            <span>{cat.i18n[locale].title}</span>
+            <span className="cat-count" aria-label={`${cat.entries.length} ${t.commandCountSuffix}`}>
+              {cat.entries.length}
+            </span>
+          </summary>
           <ul>
             {cat.entries.map((e) => (
               <li key={e.name}>

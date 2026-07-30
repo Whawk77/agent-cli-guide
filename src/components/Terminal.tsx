@@ -245,39 +245,51 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
 
   return (
     <div className="terminal">
-      <div className="term-titlebar">
-        <span className="dot dot-r" />
-        <span className="dot dot-y" />
-        <span className="dot dot-g" />
+      <div className="term-titlebar" aria-label={`${agent.name} ${t.appTitle}`}>
+        <span className="dot dot-r" aria-hidden="true" />
+        <span className="dot dot-y" aria-hidden="true" />
+        <span className="dot dot-g" aria-hidden="true" />
         <span className="term-title">
           {agent.name} — {t.appTitle}
           {mode === 'session' ? ' · 仿真会话中' : ''}
         </span>
       </div>
-      <div className="term-scroll" ref={scrollRef} onClick={() => inputRef.current?.focus()}>
+      <div
+        className="term-scroll"
+        ref={scrollRef}
+        role="region"
+        aria-label={`${agent.name} 模拟终端输出`}
+        onClick={() => inputRef.current?.focus()}
+      >
         <div className="welcome">
-          <div className="welcome-name">
+          <h1 className="welcome-name">
             {agent.name}
             <span className={`coverage coverage-${agent.coverage}`}>
               {agent.coverage === 'full' ? t.coverageFull : t.coverageCore}
             </span>
-          </div>
+          </h1>
           <div className="welcome-tagline">{agent.tagline[locale]}</div>
-          <div className="welcome-meta">
-            官方版本:{' '}
-            <a href={agent.release.source} target="_blank" rel="noreferrer">
-              <code>v{agent.release.version}</code>
-            </a>{' '}
-            · {agent.release.channel === 'stable' ? '稳定版' : '最新版'} · 核验于 {agent.release.verifiedAt}
-          </div>
-          <div className="welcome-meta">
-            {t.installLabel}: <code>{agent.install}</code>
-          </div>
-          <div className="welcome-meta">
-            {t.homepageLabel}:{' '}
-            <a href={agent.homepage} target="_blank" rel="noreferrer">
-              {agent.homepage}
-            </a>
+          <div className="welcome-meta-list">
+            <div className="welcome-meta">
+              <span>{t.officialVersionLabel}</span>
+              <span>
+                <a href={agent.release.source} target="_blank" rel="noreferrer">
+                  <code>v{agent.release.version}</code>
+                </a>{' '}
+                · {agent.release.channel === 'stable' ? t.stableChannel : t.latestChannel} ·{' '}
+                {t.verifiedAtLabel} {agent.release.verifiedAt}
+              </span>
+            </div>
+            <div className="welcome-meta">
+              <span>{t.installLabel}</span>
+              <code>{agent.install}</code>
+            </div>
+            <div className="welcome-meta">
+              <span>{t.homepageLabel}</span>
+              <a href={agent.homepage} target="_blank" rel="noreferrer">
+                {agent.homepage}
+              </a>
+            </div>
           </div>
           <div className="welcome-hint">
             {t.welcomeHint1}{' '}
@@ -295,11 +307,19 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
       </div>
       <div className="term-input-wrap">
         {showSuggestions && (
-          <ul className="suggestions">
+          <ul
+            id="terminal-suggestions"
+            className="suggestions"
+            role="listbox"
+            aria-label="命令补全建议"
+          >
             {suggestions.map((s, i) => (
               <li
                 key={s.label}
+                id={`terminal-suggestion-${i}`}
                 className={i === sugIdx ? 'active' : ''}
+                role="option"
+                aria-selected={i === sugIdx}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setInput(applySuggestion(input, s));
@@ -321,6 +341,12 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
             placeholder={mode === 'session' ? t.simSessionHint : t.inputPlaceholder}
             spellCheck={false}
             autoComplete="off"
+            role="combobox"
+            aria-label={t.terminalInputLabel}
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions}
+            aria-controls={showSuggestions ? 'terminal-suggestions' : undefined}
+            aria-activedescendant={showSuggestions ? `terminal-suggestion-${sugIdx}` : undefined}
             onChange={(e) => {
               setInput(e.target.value);
               setSugOpen(true);
@@ -333,7 +359,7 @@ export default function Terminal({ agent, agents, action, onSwitchAgent }: Props
       {mode === 'session' && agent.session ? (
         <SessionStatusBar agent={agent} state={simState} />
       ) : null}
-      <div className="annotation">
+      <div className="annotation" role="region" aria-label={t.annotationTitle} tabIndex={0}>
         <div className="annotation-title">{t.annotationTitle}</div>
         {otherAgent ? (
           <button className="switch-hint" onClick={() => onSwitchAgent(otherAgent.id)}>

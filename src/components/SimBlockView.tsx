@@ -54,6 +54,7 @@ export default function SimBlockView({ block, agent, state, onPanelSelect, onTry
                   <button
                     className={active ? 'panel-item active' : 'panel-item'}
                     disabled={!panel.stateKey}
+                    aria-pressed={panel.stateKey ? active : undefined}
                     onClick={() => panel.stateKey && onPanelSelect(panel.stateKey, item.value)}
                   >
                     <span className="panel-check">{active ? '❯' : ' '}</span>
