@@ -17,6 +17,8 @@ jobs:
     outputs:
       changed: ${{ steps.check.outputs.changed }}
       summary: ${{ steps.check.outputs.summary }}
+      releases_outdated: ${{ steps.releases.outputs.outdated }}
+      release_summary: ${{ steps.releases.outputs.summary }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,10 +26,12 @@ jobs:
           node-version: 22
       - id: check
         run: node scripts/check-docs.mjs || true
+      - id: releases
+        run: node scripts/check-releases.mjs || true
 
   auto-update:
     needs: detect
-    if: needs.detect.outputs.changed == 'true'
+    if: needs.detect.outputs.changed == 'true' || needs.detect.outputs.releases_outdated == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,10 +48,15 @@ jobs:
             以下官方文档页面自上次快照后发生了变化：
             ${{ needs.detect.outputs.summary }}
 
+            以下 CLI 出现了新的官方版本：
+            ${{ needs.detect.outputs.release_summary }}
+
             请逐个抓取这些页面的最新内容，对照更新 src/data/ 下对应 agent 的数据文件：
             - 补充新命令、删除已下线命令、修正描述；保持 schema（src/data/types.ts）与既有翻译风格（中文摘要人工质感，en 保留官方原文）
             - 高频新命令按 claude-code.ts 的样板补 simulate 模拟规格
+            - 同步更新 release 元数据与 scripts/tool-releases.json
             - 运行 `node scripts/check-docs.mjs --update` 刷新快照
+            - 运行 `npm run check:releases` 核验版本
             - 运行 `npm ci && npm test` 确保通过
             完成后创建分支并开 PR，标题注明"docs-sync"，正文列出每个 agent 的变化点。
           claude_args: '--allowedTools "Bash,Read,Edit,Write,WebFetch,WebSearch"'
@@ -60,5 +69,5 @@ jobs:
         run: |
           gh issue create \
             --repo "$GITHUB_REPOSITORY" \
-            --title "官方文档有更新，命令数据需要核对（$(date +%Y-%m-%d)）" \
-            --body "$(printf '自动检测发现以下官方文档页面发生变化：\n\n%s\n\n请核对并更新 src/data/ 对应数据文件，然后运行 `node scripts/check-docs.mjs --update` 刷新快照。\n\n提示：在仓库 Settings → Secrets 配置 ANTHROPIC_API_KEY 后，此工作流会自动完成更新并开 PR。' "${{ needs.detect.outputs.summary }}")"
+            --title "官方 CLI 或文档有更新，命令数据需要核对（$(date +%Y-%m-%d)）" \
+            --body "$(printf '自动检测发现以下官方文档页面或 CLI 版本发生变化：\n\n%s\n\n%s\n\n请核对并更新 src/data/ 对应数据文件、release 元数据与 scripts/tool-releases.json，然后刷新文档快照并运行 `npm run check:releases`。\n\n提示：在仓库 Settings → Secrets 配置 ANTHROPIC_API_KEY 后，此工作流会自动完成更新并开 PR。' "${{ needs.detect.outputs.summary }}" "${{ needs.detect.outputs.release_summary }}")"
